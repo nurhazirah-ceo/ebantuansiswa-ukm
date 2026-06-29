@@ -360,6 +360,11 @@
                         answer: 'Bukti agihan dipaparkan selepas bantuan selesai disalurkan. Paparan ini tidak menunjukkan maklumat peribadi pelajar.'
                     },
                     {
+                        label: 'Tabung Bantuan Pelajar',
+                        keywords: ['tabung bantuan pelajar', 'sumbangan tunai', 'sumbangan wang umum', 'cash donation', 'cash', 'tunai', 'wang umum', 'sumbang ke tabung', 'sumbangan tabung', 'tabung', 'toyyibpay'],
+                        answer: 'Penderma boleh membuat sumbangan tunai melalui menu Tabung Bantuan Pelajar / Sumbang Ke Tabung.\n\nPembayaran dibuat secara dalam talian melalui ToyyibPay.\n\nSelepas pembayaran berjaya, penderma boleh melihat status dan memuat turun resit sumbangan.'
+                    },
+                    {
                         label: 'Pembayaran sumbangan',
                         keywords: ['pembayaran sumbangan', 'bayar', 'toyyibpay', 'bayaran online'],
                         answer: 'Pembayaran atas talian diproses melalui ToyyibPay. Status sumbangan akan dikemas kini selepas pembayaran disahkan.'

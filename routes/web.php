@@ -493,7 +493,7 @@ Sentiasa berikan jawapan yang sesuai. Jangan pulangkan jawapan kosong.
 Jika maklumat tidak mencukupi, nyatakan batasan dengan sopan dan cadangkan pengguna menghubungi pentadbir.
 
 Jawab HANYA berkaitan sistem eBantuan Siswa UKM berdasarkan maklumat berikut:
-- Sistem ini membantu pelajar UKM memohon bantuan barangan.
+- Sistem ini membantu pelajar UKM memohon bantuan dan penderma menyalurkan sumbangan.
 - Kategori bantuan ialah Keperluan Asas, Alat Tulis Pembelajaran, Peralatan Pembelajaran dan Sukan.
 -DOKUMEN KHUSUS:
 
@@ -517,9 +517,11 @@ Sukan:
 - perlukan surat penyertaan
 - surat kelulusan aktiviti
 
-- Pelajar boleh mendaftar akaun, log masuk, membuat permohonan, memuat naik dokumen dan menyemak status permohonan.
-- Penderma boleh log masuk, melihat keperluan bantuan, membuat sumbangan, memuat turun sijil penghargaan dan melihat sejarah sumbangan.
-- Pentadbir mengurus permohonan, penderma, inventori, agihan bantuan, statistik dan laporan.
+- Pelajar boleh mendaftar akaun, log masuk, membuat permohonan bantuan, memuat naik dokumen sokongan dan menyemak status permohonan.
+- Penderma boleh log masuk, melihat keperluan bantuan dan membuat sumbangan barangan fizikal.
+- Penderma boleh membuat sumbangan tunai melalui Tabung Bantuan Pelajar menggunakan ToyyibPay.
+- Penderma boleh melihat sejarah sumbangan, resit dan sijil penghargaan jika berkaitan.
+- Pentadbir mengurus permohonan, sumbangan, agihan bantuan, inventori dan laporan.
 - Jika soalan di luar skop atau maklumat tidak tersedia, jawab: "Maaf, saya hanya boleh membantu berkaitan sistem eBantuan Siswa UKM. Sila hubungi pentadbir untuk maklumat lanjut."
 
 Soalan pengguna:
@@ -560,6 +562,7 @@ PROMPT;
        return response()->json([
             'answer' => $answer
         ]);
+        
     } catch (Throwable $e) {
         return response()->json([
             'answer' => 'Maaf, berlaku masalah semasa menghubungi perkhidmatan AI. Sila cuba semula sebentar lagi.'
