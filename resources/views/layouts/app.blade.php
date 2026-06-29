@@ -17,6 +17,7 @@
 
     <!-- VITE -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('layouts.partials.sweet-alert')
 </head>
 
 <body class="font-[Poppins] antialiased bg-gray-100">
@@ -87,9 +88,6 @@
     </main>
 
 </div>
-
-<!-- SWEETALERT -->
-@include('layouts.partials.sweet-alert')
 
 <!-- ================= CART SCRIPT ================= -->
 <script>

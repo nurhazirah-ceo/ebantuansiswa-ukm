@@ -283,27 +283,4 @@
     </div>
 </div>
 
-@if (session('payment_error') || session('payment_info'))
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    Swal.fire({
-        icon: @json(session('payment_error') ? 'error' : 'info'),
-        title: @json(session('payment_error') ? 'Pembayaran Tidak Berjaya' : 'Status Pembayaran'),
-        text: @json(session('payment_error') ?: session('payment_info')),
-        confirmButtonText: 'Teruskan',
-        confirmButtonColor: @json(session('payment_error') ? '#dc2626' : '#2563eb'),
-        background: '#ffffff',
-        color: '#0f172a',
-        width: 420,
-        padding: '1.6rem',
-        customClass: {
-            popup: 'rounded-3xl shadow-xl',
-            title: 'text-2xl font-bold text-slate-900',
-            confirmButton: 'rounded-2xl px-7 py-3 font-semibold shadow'
-        }
-    });
-});
-</script>
-@endif
-
 @endsection

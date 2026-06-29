@@ -221,27 +221,4 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-@if (session('payment_error'))
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    Swal.fire({
-        icon: 'error',
-        title: 'Pembayaran Tidak Berjaya',
-        text: @json(session('payment_error')),
-        confirmButtonText: 'Teruskan',
-        confirmButtonColor: '#dc2626',
-        background: '#ffffff',
-        color: '#0f172a',
-        width: 420,
-        padding: '1.6rem',
-        customClass: {
-            popup: 'rounded-3xl shadow-xl',
-            title: 'text-2xl font-bold text-slate-900',
-            confirmButton: 'rounded-2xl px-7 py-3 font-semibold shadow'
-        }
-    });
-});
-</script>
-@endif
-
 @endsection

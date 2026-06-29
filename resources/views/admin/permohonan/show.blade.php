@@ -279,7 +279,6 @@
 </div>
 
 @if($approvalToAgihan)
-    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             Swal.fire({

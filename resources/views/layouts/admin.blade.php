@@ -7,6 +7,7 @@
     <title>@yield('page-title', config('app.name', 'eBantuanSiswa UKM')) | {{ config('app.name', 'eBantuanSiswa UKM') }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('layouts.partials.sweet-alert')
 </head>
 
 <body class="bg-slate-50 font-sans antialiased text-slate-900">
@@ -21,22 +22,6 @@
         </main>
 
     </div>
-
-    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
-
-    @if(session('success') && ! session('approval_to_agihan'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berjaya',
-                    text: @json(session('success')),
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#071633'
-                });
-            });
-        </script>
-    @endif
 
     <script>
         document.addEventListener('submit', function (event) {

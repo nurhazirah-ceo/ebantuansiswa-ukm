@@ -53,6 +53,9 @@ Route::get('/', function () {
     ));
 });
 
+Route::view('/choose-role', 'auth.choose-role')
+    ->name('choose-role');
+
 /*
 |--------------------------------------------------------------------------
 | Login

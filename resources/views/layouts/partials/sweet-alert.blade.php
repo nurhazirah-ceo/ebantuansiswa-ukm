@@ -1,42 +1,69 @@
 @once
-    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
+    <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
 @endonce
 
 @php
     $sweetAlert = null;
     $sweetAlertRedirectUrl = session('sweet_alert_redirect_url');
     $ignoredStatusAlerts = ['profile-updated', 'password-updated'];
+    $suppressGenericSweetAlert = session('approval_to_agihan');
 
-    foreach ([
-        'error' => ['icon' => 'error', 'title' => 'Ralat'],
-        'warning' => ['icon' => 'warning', 'title' => 'Perhatian'],
-        'success' => ['icon' => 'success', 'title' => 'Berjaya'],
-        'status' => ['icon' => 'success', 'title' => 'Berjaya'],
-        'info' => ['icon' => 'info', 'title' => 'Makluman'],
-    ] as $key => $meta) {
-        if (! session()->has($key)) {
-            continue;
-        }
-
-        $message = session($key);
-
-        if ($key === 'status') {
-            if ($message === 'verification-link-sent') {
-                $meta = ['icon' => 'success', 'title' => 'Emel dihantar'];
-                $message = 'Pautan pengesahan baharu telah dihantar ke emel anda.';
-            } elseif (in_array($message, $ignoredStatusAlerts, true)) {
+    if (! $suppressGenericSweetAlert) {
+        foreach ([
+            'payment_error' => [
+                'icon' => 'error',
+                'title' => 'Pembayaran Tidak Berjaya',
+                'confirmButtonText' => 'Teruskan',
+                'confirmButtonColor' => '#dc2626',
+            ],
+            'payment_info' => [
+                'icon' => 'info',
+                'title' => 'Status Pembayaran',
+                'confirmButtonText' => 'Teruskan',
+                'confirmButtonColor' => '#2563eb',
+            ],
+            'payment_success' => [
+                'icon' => 'success',
+                'messageAs' => 'title',
+                'confirmButtonText' => 'Teruskan',
+                'confirmButtonColor' => '#2563eb',
+            ],
+            'error' => ['icon' => 'error', 'title' => 'Ralat'],
+            'warning' => ['icon' => 'warning', 'title' => 'Perhatian'],
+            'success' => ['icon' => 'success', 'title' => 'Berjaya'],
+            'status' => ['icon' => 'success', 'title' => 'Berjaya'],
+            'info' => ['icon' => 'info', 'title' => 'Makluman'],
+        ] as $key => $meta) {
+            if (! session()->has($key)) {
                 continue;
             }
-        }
 
-        $sweetAlert = [
-            'icon' => $meta['icon'],
-            'title' => $meta['title'],
-            'text' => $message,
-            'confirmButtonText' => 'OK',
-            'confirmButtonColor' => '#2B4570',
-        ];
-        break;
+            $message = session($key);
+
+            if ($key === 'status') {
+                if ($message === 'verification-link-sent') {
+                    $meta = ['icon' => 'success', 'title' => 'Emel dihantar'];
+                    $message = 'Pautan pengesahan baharu telah dihantar ke emel anda.';
+                } elseif (in_array($message, $ignoredStatusAlerts, true)) {
+                    continue;
+                }
+            }
+
+            $sweetAlert = [
+                'icon' => $meta['icon'],
+                'confirmButtonText' => $meta['confirmButtonText'] ?? 'OK',
+                'confirmButtonColor' => $meta['confirmButtonColor'] ?? '#2B4570',
+            ];
+
+            if (($meta['messageAs'] ?? 'text') === 'title') {
+                $sweetAlert['title'] = $message;
+            } else {
+                $sweetAlert['title'] = $meta['title'];
+                $sweetAlert['text'] = $message;
+            }
+
+            break;
+        }
     }
 
     if (! $sweetAlert && isset($errors) && $errors->any()) {

@@ -13,6 +13,7 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('layouts.partials.sweet-alert')
 </head>
 
 <body
@@ -24,8 +25,6 @@
     @unless (request()->routeIs('login') || request()->is('login'))
         @include('components.chatbot')
     @endunless
-
-    @include('layouts.partials.sweet-alert')
 
 </body>
 </html>

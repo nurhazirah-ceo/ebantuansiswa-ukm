@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>eBantuanSiswa UKM</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('layouts.partials.sweet-alert')
 </head>
 <body>
 
