@@ -57,11 +57,11 @@ Route::get('/', function () {
 | Login
 |--------------------------------------------------------------------------
 */
-Route::get('/login', [LoginController::class, 'show'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])
-    ->middleware('throttle:5,1')
+Route::get('/login', [LoginController::class, 'show'])
     ->name('login');
 
+Route::post('/login', [LoginController::class, 'login'])
+    ->middleware('throttle:5,1');
 /*
 |--------------------------------------------------------------------------
 | Dashboard
