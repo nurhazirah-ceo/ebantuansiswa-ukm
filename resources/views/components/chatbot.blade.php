@@ -32,7 +32,7 @@
 
         <div class="flex h-[calc(100%-76px)] min-h-0 flex-col bg-slate-50">
             <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3" data-chatbot-messages>
-                <div class="mr-6 rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-xs leading-relaxed text-slate-700 shadow-sm ring-1 ring-slate-200 sm:text-sm">
+                <div class="mr-6 rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-xs leading-relaxed text-slate-700 shadow-sm ring-1 ring-slate-200 sm:text-sm" data-chatbot-message="bot">
                     Hai! 👋 Saya eBantu Bot.<br>
                     Untuk mula, pilih kategori supaya saya boleh bantu anda dengan lebih tepat 😊
                 </div>
@@ -85,6 +85,274 @@
 </div>
 
 @once
+    <style>
+        [data-ebs-chatbot] {
+            position: fixed;
+            right: 1.25rem;
+            bottom: 1.25rem;
+            z-index: 9999;
+            font-family: Poppins, Figtree, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        [data-ebs-chatbot] .hidden {
+            display: none !important;
+        }
+
+        [data-chatbot-panel] {
+            position: absolute;
+            right: 0;
+            bottom: 5rem;
+            width: min(24rem, calc(100vw - 2rem));
+            height: min(80vh, 640px);
+            overflow: hidden;
+            border: 1px solid #dbeafe;
+            border-radius: 1rem;
+            background: #fff;
+            box-shadow: 0 24px 60px rgba(30, 64, 175, 0.2);
+        }
+
+        [data-chatbot-panel] > div:first-child {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            color: #fff;
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
+        }
+
+        [data-chatbot-panel] > div:first-child > div {
+            display: flex;
+            min-width: 0;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        [data-chatbot-panel] > div:first-child > div > div:first-child {
+            display: flex;
+            width: 2.75rem;
+            height: 2.75rem;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+        }
+
+        [data-chatbot-panel] h2 {
+            margin: 0;
+            overflow: hidden;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.25rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        [data-chatbot-panel] p {
+            margin: 0.125rem 0 0;
+            overflow: hidden;
+            color: #eff6ff;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        [data-chatbot-panel] svg,
+        [data-chatbot-toggle] svg {
+            display: block;
+        }
+
+        [data-chatbot-panel] > div:nth-child(2) {
+            display: flex;
+            height: calc(100% - 76px);
+            min-height: 0;
+            flex-direction: column;
+            background: #f8fafc;
+        }
+
+        [data-chatbot-messages] {
+            min-height: 0;
+            flex: 1 1 0%;
+            overflow-y: auto;
+            padding: 0.75rem 1rem;
+        }
+
+        [data-chatbot-message],
+        [data-chatbot-typing] {
+            margin-bottom: 0.5rem;
+            border-radius: 1rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8125rem;
+            line-height: 1.45;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-chatbot-message="bot"],
+        [data-chatbot-typing] {
+            margin-right: 1.5rem;
+            border-top-left-radius: 0.25rem;
+            color: #334155;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+        }
+
+        [data-chatbot-message="user"] {
+            margin-left: 1.5rem;
+            border-top-right-radius: 0.25rem;
+            color: #fff;
+            background: #2563eb;
+        }
+
+        [data-chatbot-panel] > div:nth-child(2) > div:last-child {
+            flex-shrink: 0;
+            border-top: 1px solid #e2e8f0;
+            background: #fff;
+            padding: 0.75rem 1rem;
+        }
+
+        [data-chatbot-actions] {
+            display: flex;
+            min-height: 1.75rem;
+            align-items: center;
+            gap: 0.375rem;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        [data-chatbot-actions] button {
+            max-width: 100%;
+            border: 1px solid #dbeafe;
+            border-radius: 9999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        [data-chatbot-actions] button:hover {
+            border-color: #93c5fd;
+            background: #dbeafe;
+        }
+
+        [data-chatbot-actions] button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        [data-chatbot-form] {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        [data-chatbot-input] {
+            min-width: 0;
+            flex: 1 1 0%;
+            border: 1px solid #cbd5e1;
+            border-radius: 9999px;
+            color: #1e293b;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            padding: 0.625rem 1rem;
+        }
+
+        [data-chatbot-form] button,
+        [data-chatbot-toggle] {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            color: #fff;
+            background: #2563eb;
+            cursor: pointer;
+        }
+
+        [data-chatbot-form] button {
+            width: 2.75rem;
+            height: 2.75rem;
+            flex-shrink: 0;
+            border-radius: 9999px;
+            box-shadow: 0 10px 18px rgba(37, 99, 235, 0.25);
+        }
+
+        [data-chatbot-close] {
+            display: inline-flex;
+            width: 2.25rem;
+            height: 2.25rem;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: 9999px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.12);
+            cursor: pointer;
+        }
+
+        [data-chatbot-actions] button[data-question] {
+            min-width: 0;
+            flex: 1 1 0%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        [data-chatbot-toggle] {
+            position: relative;
+            width: 4rem;
+            height: 4rem;
+            border-radius: 9999px;
+            box-shadow: 0 16px 28px rgba(29, 78, 216, 0.3);
+        }
+
+        [data-chatbot-toggle]:hover,
+        [data-chatbot-form] button:hover {
+            background: #1d4ed8;
+        }
+
+        [data-chatbot-toggle] > span:first-child {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            background: rgba(96, 165, 250, 0.4);
+            animation: ebs-chatbot-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        [data-chatbot-toggle] > span:last-child {
+            position: relative;
+            display: flex;
+            width: 4rem;
+            height: 4rem;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+        }
+
+        .sr-only[data-chatbot-input-label] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @keyframes ebs-chatbot-pulse {
+            75%, 100% {
+                opacity: 0;
+                transform: scale(1.5);
+            }
+        }
+    </style>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const greetingAnswer = 'Hai! 👋\nSaya eBantu Bot.\n\nUntuk mula, pilih kategori supaya saya boleh bantu anda dengan lebih tepat 😊';
@@ -440,6 +708,7 @@
             const appendMessage = (messages, text, role) => {
                 const bubble = document.createElement('div');
                 bubble.innerHTML = formatMessage(text);
+                bubble.dataset.chatbotMessage = role;
 
                 if (role === 'user') {
                     bubble.className = 'ml-6 whitespace-pre-line rounded-2xl rounded-tr-sm bg-blue-600 px-3 py-2 text-xs leading-relaxed text-white shadow-sm sm:text-sm';
@@ -614,43 +883,10 @@
                 };
 
                 const findAnswer = async (question) => {
-                    const query = normalize(question);
+                    const cleanQuestion = String(question || '').trim();
 
-                    if (!query) {
+                    if (!cleanQuestion) {
                         return unknownAnswer;
-                    }
-
-                    if (isGreeting(query)) {
-                        selectedRole = null;
-                        renderRoleButtons();
-                        return greetingAnswer;
-                    }
-
-                    if (query === 'pelajar') {
-                        activateRole('pelajar');
-                        return getRoleReply('pelajar');
-                    }
-
-                    if (query === 'penderma') {
-                        activateRole('penderma');
-                        return getRoleReply('penderma');
-                    }
-
-                    const searchableTopics = selectedRole ? topics[selectedRole] : [...topics.pelajar, ...topics.penderma];
-                    let bestMatch = null;
-                    let bestScore = 0;
-
-                    searchableTopics.forEach((topic) => {
-                        const score = scoreTopic(topic, query);
-
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestMatch = topic;
-                        }
-                    });
-
-                    if (bestScore >= 45) {
-                        return bestMatch.answer;
                     }
 
                     try {
@@ -661,7 +897,9 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
                             },
                             body: JSON.stringify({
-                                question: question
+                                question: selectedRole
+                                    ? `[Peranan dipilih: ${selectedRole}]\n${cleanQuestion}`
+                                    : cleanQuestion
                             })
                         });
 
