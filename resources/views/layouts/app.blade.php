@@ -89,65 +89,7 @@
 </div>
 
 <!-- SWEETALERT -->
- 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-@php
-    $sweetAlert = null;
-    $sweetAlertRedirectUrl = session('sweet_alert_redirect_url');
-
-    foreach ([
-        'success' => ['icon' => 'success', 'title' => 'Berjaya'],
-        'error' => ['icon' => 'error', 'title' => 'Ralat'],
-        'warning' => ['icon' => 'warning', 'title' => 'Perhatian'],
-        'info' => ['icon' => 'info', 'title' => 'Makluman'],
-    ] as $key => $meta) {
-        if (session($key)) {
-            $sweetAlert = [
-                'icon' => $meta['icon'],
-                'title' => $meta['title'],
-                'text' => session($key),
-                'confirmButtonText' => 'OK',
-                'confirmButtonColor' => '#071633',
-            ];
-            break;
-        }
-    }
-
-    if (! $sweetAlert && session('status') === 'verification-link-sent') {
-        $sweetAlert = [
-            'icon' => 'success',
-            'title' => 'Emel dihantar',
-            'text' => 'Pautan pengesahan baharu telah dihantar ke emel anda.',
-            'confirmButtonText' => 'OK',
-            'confirmButtonColor' => '#071633',
-        ];
-    }
-
-    if (! $sweetAlert && $errors->any()) {
-        $sweetAlert = [
-            'icon' => 'error',
-            'title' => 'Maklumat tidak lengkap',
-            'text' => $errors->first().($errors->count() > 1 ? ' Sila semak semua mesej ralat pada borang.' : ''),
-            'confirmButtonText' => 'OK',
-            'confirmButtonColor' => '#071633',
-        ];
-    }
-@endphp
-
-@if($sweetAlert)
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    Swal.fire(@json($sweetAlert)).then(function (result) {
-        const redirectUrl = @json($sweetAlertRedirectUrl);
-
-        if (result.isConfirmed && redirectUrl) {
-            window.location.href = redirectUrl;
-        }
-    });
-});
-</script>
-@endif
+@include('layouts.partials.sweet-alert')
 
 <!-- ================= CART SCRIPT ================= -->
 <script>

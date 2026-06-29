@@ -67,10 +67,24 @@ class LoginController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return match ($user->role) {
+        if ($user->role === 'pelajar' && ! $user->hasVerifiedEmail()) {
+            $intendedUrl = $request->session()->get('url.intended');
+
+            if ($intendedUrl && Str::contains($intendedUrl, '/verify-email/')) {
+                return redirect()->intended('/dashboard/pelajar');
+            }
+
+            $request->session()->forget('url.intended');
+
+            return redirect()
+                ->route('verification.notice')
+                ->with('warning', 'Sila sahkan emel siswa anda sebelum meneruskan ke dashboard. Semak peti masuk emel untuk pautan pengesahan akaun.');
+        }
+
+        return (match ($user->role) {
             'pelajar' => redirect()->intended('/dashboard/pelajar'),
             'penderma' => redirect()->intended('/dashboard/penderma'),
             'admin' => redirect()->intended('/dashboard/admin'),
-        };
+        })->with('success', 'Log masuk berjaya.');
     }
 }
