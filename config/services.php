@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+    ],
+
     'toyyibpay' => [
         'base_url' => env('TOYYIBPAY_BASE_URL', 'https://dev.toyyibpay.com'),
         'secret_key' => env('TOYYIBPAY_SECRET_KEY'),

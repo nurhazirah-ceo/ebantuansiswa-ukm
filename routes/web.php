@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Donor;
 use App\Models\Item;
@@ -478,9 +479,18 @@ Route::post('/chatbot/gemini', function (Request $request) {
         ], 422);
     }
 
-    $apiKey = env('GEMINI_API_KEY');
+    $apiKey = config('services.gemini.api_key');
+    $apiKey = is_string($apiKey) ? trim($apiKey) : '';
 
-    if (!$apiKey) {
+    Log::info('Gemini chatbot API key configuration checked.', [
+        'api_key_configured' => $apiKey !== '',
+        'gemini_api_key_detected' => $apiKey !== '',
+        'source' => 'config:services.gemini.api_key',
+    ]);
+
+    if ($apiKey === '') {
+        Log::warning('Gemini chatbot request skipped because API key is not configured.');
+
         return response()->json([
             'answer' => 'Maaf, perkhidmatan AI belum tersedia kerana tetapan sistem belum lengkap. Sila hubungi pentadbir untuk bantuan lanjut.'
         ], 500);
@@ -529,6 +539,10 @@ Soalan pengguna:
 PROMPT;
 
     try {
+        Log::info('Gemini chatbot API request sending.', [
+            'request_sent' => true,
+        ]);
+
         $response = Http::timeout(20)->post(
             'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKey,
             [
@@ -542,7 +556,17 @@ PROMPT;
             ]
         );
 
+        Log::info('Gemini chatbot API response received.', [
+            'status' => $response->status(),
+            'successful' => $response->successful(),
+        ]);
+
         if ($response->failed()) {
+            Log::warning('Gemini chatbot API returned an error response.', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
             return response()->json([
                 'answer' => 'Maaf, perkhidmatan AI tidak dapat dihubungi buat masa ini. Sila cuba semula sebentar lagi.'
             ], 502);
@@ -564,6 +588,11 @@ PROMPT;
         ]);
         
     } catch (Throwable $e) {
+        Log::error('Gemini chatbot API request failed with an exception.', [
+            'exception' => get_class($e),
+            'message' => $e->getMessage(),
+        ]);
+
         return response()->json([
             'answer' => 'Maaf, berlaku masalah semasa menghubungi perkhidmatan AI. Sila cuba semula sebentar lagi.'
         ], 500);
