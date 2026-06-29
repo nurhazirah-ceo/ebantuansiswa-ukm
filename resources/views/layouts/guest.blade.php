@@ -59,7 +59,7 @@
         ];
     }
 
-    if (! $sweetAlert && $errors->any()) {
+    if (! $sweetAlert && isset($errors) && $errors->any()) {
         $sweetAlert = [
             'icon' => 'error',
             'title' => 'Maklumat tidak lengkap',
