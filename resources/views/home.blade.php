@@ -1239,13 +1239,26 @@ body {
               @php
                 $donorName = optional($donor->user)->name ?? 'Penderma';
                 $donorInitial = strtoupper(substr(trim($donorName), 0, 1)) ?: 'P';
-                $donorLogoExists = $donor->logo && file_exists(public_path('storage/' . $donor->logo));
+                $donorLogoUrl = null;
+
+                if ($donor->logo) {
+                  $donorLogoFilename = basename(str_replace('\\', '/', (string) $donor->logo));
+                  $publicDonorLogoPath = 'image/donors/' . $donorLogoFilename;
+
+                  if ($donorLogoFilename !== '' && file_exists(public_path($publicDonorLogoPath))) {
+                    $donorLogoUrl = asset($publicDonorLogoPath);
+                  } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($donor->logo)) {
+                    $donorLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($donor->logo);
+                  }
+                }
+
+                $donorLogoExists = $donorLogoUrl !== null;
               @endphp
               <div class="logo-item">
                 <span class="logo-avatar {{ $donorLogoExists ? 'logo-avatar--backup' : '' }}">{{ $donorInitial }}</span>
                 @if ($donorLogoExists)
                   <img
-                    src="{{ asset('storage/' . $donor->logo) }}"
+                    src="{{ $donorLogoUrl }}"
                     alt="{{ $donorName }}"
                     onerror="this.style.display='none'; this.previousElementSibling.classList.remove('logo-avatar--backup');"
                   >
