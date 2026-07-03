@@ -271,9 +271,9 @@
                                 class="w-full h-12 px-4 border border-slate-300 bg-white rounded-xl text-sm shadow-sm">
 
                             <option value="">Pilih Hubungan</option>
-                            <option>Anak</option>
-                            <option>Anak Angkat</option>
-                            <option>Anak Tiri</option>
+                            <option>Abang</option>
+                            <option>Kakak</option>
+                            <option>Adik</option>
                             <option>Lain-lain</option>
 
                         </select>

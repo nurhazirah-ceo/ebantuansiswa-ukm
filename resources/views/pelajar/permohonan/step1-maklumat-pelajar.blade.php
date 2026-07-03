@@ -1,4 +1,8 @@
 <div id="step-1">
+    @php
+        $studentProfile = auth()->user();
+        $profileFaculty = $studentProfile?->fakulti;
+    @endphp
 
     <div class="bg-white border border-slate-200 rounded-3xl shadow-lg overflow-hidden">
 
@@ -15,6 +19,18 @@
 
         <!-- Form Body -->
         <div class="p-8">
+            @if(blank($profileFaculty))
+                <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+                    <p class="font-semibold">Fakulti belum dilengkapkan dalam profil pelajar.</p>
+                    <p class="mt-1">
+                        Sila kemas kini fakulti di
+                        <a href="{{ route('profile.edit') }}#maklumat-profil" class="font-semibold underline">
+                            Maklumat Profil
+                        </a>
+                        sebelum menghantar permohonan.
+                    </p>
+                </div>
+            @endif
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -120,64 +136,25 @@
                         Fakulti
                     </label>
 
-                    <div class="relative">
+                    <input
+                        type="text"
+                        name="fakulti"
+                        id="fakulti"
+                        value="{{ $profileFaculty }}"
+                        required
+                        readonly
+                        data-profile-required-message="Sila kemas kini fakulti dalam profil pelajar sebelum meneruskan permohonan."
+                        class="w-full h-14 px-5 border border-slate-300 bg-slate-100 rounded-2xl
+                               focus:outline-none focus:ring-2 focus:ring-blue-400
+                               focus:border-blue-400 text-[15px] text-slate-800
+                               shadow-sm transition duration-200"
+                    >
 
-                        <select
-                            name="fakulti"
-                            id="fakulti"
-                            required
-                            class="w-full h-14 px-5 pr-12 border border-slate-300 bg-white rounded-2xl
-                                   focus:outline-none focus:ring-2 focus:ring-blue-400
-                                   focus:border-blue-400 text-[15px] text-slate-800
-                                   shadow-sm transition duration-200 appearance-none"
-                        >
-                            <option value="">
-                                -- Pilih Fakulti --
-                            </option>
-
-                            @php
-                                $fakultiList = [
-                                    'Fakulti Kejuruteraan dan Alam Bina',
-                                    'Fakulti Sains dan Teknologi',
-                                    'Fakulti Teknologi dan Sains Maklumat',
-                                    'Fakulti Ekonomi dan Pengurusan',
-                                    'Fakulti Sains Sosial dan Kemanusiaan',
-                                    'Fakulti Undang-Undang',
-                                    'Fakulti Pendidikan',
-                                    'Fakulti Pengajian Islam',
-                                    'Fakulti Perubatan',
-                                    'Fakulti Pergigian',
-                                    'Fakulti Farmasi',
-                                    'Fakulti Sains Kesihatan',
-                                    'Fakulti Bahasa dan Linguistik',
-                                ];
-                            @endphp
-
-                            @foreach($fakultiList as $fakulti)
-                                <option
-                                    value="{{ $fakulti }}"
-                                    {{ old('fakulti') == $fakulti ? 'selected' : '' }}
-                                >
-                                    {{ $fakulti }}
-                                </option>
-                            @endforeach
-
-                        </select>
-
-                        <div class="pointer-events-none absolute inset-y-0 right-5 flex items-center text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                class="w-5 h-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-
-                    </div>
+                    @error('fakulti')
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ $message }}
+                        </p>
+                    @enderror
                 </div>
 
                 <!-- Tahun Pengajian -->

@@ -113,6 +113,24 @@
                 />
                 <x-input-error class="mt-1" :messages="$errors->get('matrik')" />
             </div>
+
+            <div>
+                <x-input-label for="fakulti" value="Fakulti" />
+                <select
+                    id="fakulti"
+                    name="fakulti"
+                    required
+                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                    <option value="">-- Pilih Fakulti --</option>
+                    @foreach(\App\Support\StudentAcademicProfile::faculties() as $fakulti)
+                        <option value="{{ $fakulti }}" @selected(old('fakulti', $user->fakulti) === $fakulti)>
+                            {{ $fakulti }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-input-error class="mt-1" :messages="$errors->get('fakulti')" />
+            </div>
         @endif
 
         <div>

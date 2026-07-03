@@ -41,10 +41,20 @@ class PermohonanController extends Controller
         $student = Auth::user();
         $studentMatrik = strtoupper((string) $student->matrik);
         $studentEmail = strtolower((string) $student->email);
+        $studentFaculty = trim((string) $student->fakulti);
+
+        if ($studentFaculty === '') {
+            return back()
+                ->withErrors([
+                    'fakulti' => 'Sila kemas kini fakulti dalam profil pelajar sebelum menghantar permohonan.',
+                ])
+                ->withInput();
+        }
 
         $request->merge([
             'no_matrik' => strtoupper(trim((string) $request->input('no_matrik'))),
             'email_ukm' => strtolower(trim((string) $request->input('email_ukm'))),
+            'fakulti' => $studentFaculty,
         ]);
 
         $requestedJenisBantuan = (string) $request->input('jenis_bantuan');
@@ -64,8 +74,8 @@ class PermohonanController extends Controller
             'no_matrik' => ['required', 'regex:/^[Aa][0-9]{6}$/', Rule::in([$studentMatrik])],
             'email_ukm' => ['required', 'email', 'max:255', Rule::in([$studentEmail])],
             'no_telefon' => ['required', 'regex:/^01[0-9]{8,9}$/'],
-            'fakulti' => 'required|string|max:255',
-            'tahun_pengajian' => 'required|string|in:Tahun 1,Tahun 2,Tahun 3,Tahun 4',
+            'fakulti' => ['required', 'string', 'max:255', Rule::in([$studentFaculty])],
+            'tahun_pengajian' => ['required', 'string', Rule::in(['Tahun 1', 'Tahun 2', 'Tahun 3', 'Tahun 4'])],
 
             // STEP 2
             'penjaga_nama' => 'required|string|max:255',
@@ -252,6 +262,7 @@ class PermohonanController extends Controller
 
         $validated['no_matrik'] = $studentMatrik;
         $validated['email_ukm'] = $studentEmail;
+        $validated['fakulti'] = $studentFaculty;
 
         $kategoriByJenis = [
             'bantuan_asas_hidup' => ['keperluan_asas'],

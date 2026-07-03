@@ -87,7 +87,7 @@
                             <p class="mt-1 text-sm font-semibold text-slate-900">{{ $pelajar?->fakulti ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Tahun Pengajian</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Sesi Akademik</p>
                             <p class="mt-1 text-sm font-semibold text-slate-900">{{ $pelajar?->tahun_pengajian ?? '-' }}</p>
                         </div>
                         <div>

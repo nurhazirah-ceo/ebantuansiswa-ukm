@@ -13,6 +13,7 @@
 
         $lockedBantuanTypes = $lockedBantuanTypes ?? [];
         $latestPermohonan = $latestPermohonan ?? null;
+        $academicSession = \App\Support\StudentAcademicProfile::academicSession();
     @endphp
 
     <div class="max-w-[1350px] mx-auto px-6 pt-6">
@@ -172,22 +173,22 @@
                         <div class="mt-5 rounded-2xl bg-slate-50 border border-slate-100 p-4 text-left space-y-3">
                             <div class="flex justify-between gap-3">
                                 <span class="text-slate-500 text-sm">No Matrik</span>
-                                <span class="font-bold text-slate-900 text-sm">
-                                    {{ $dashboardUser->matrik ?? 'A208972' }}
+                                <span class="font-bold text-slate-900 text-sm text-right break-words">
+                                    {{ filled($dashboardUser->matrik) ? $dashboardUser->matrik : '-' }}
                                 </span>
                             </div>
 
-                            <div class="flex justify-between gap-3">
+                            <div class="flex items-start justify-between gap-3">
                                 <span class="text-slate-500 text-sm">Fakulti</span>
-                                <span class="font-bold text-slate-900 text-sm">
-                                    {{ $dashboardUser->fakulti ?? 'FTSM' }}
+                                <span class="font-bold text-slate-900 text-sm text-right break-words">
+                                    {{ filled($dashboardUser->fakulti) ? $dashboardUser->fakulti : 'Tidak lengkap' }}
                                 </span>
                             </div>
 
                             <div class="flex justify-between gap-3">
-                                <span class="text-slate-500 text-sm">Program</span>
+                                <span class="text-slate-500 text-sm">Sesi</span>
                                 <span class="font-bold text-slate-900 text-sm text-right">
-                                    {{ $dashboardUser->program ?? 'Sains Komputer' }}
+                                    {{ $academicSession }}
                                 </span>
                             </div>
                         </div>

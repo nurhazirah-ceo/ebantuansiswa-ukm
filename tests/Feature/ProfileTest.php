@@ -33,6 +33,51 @@ test('profile information can be updated', function () {
     $this->assertNull($user->email_verified_at);
 });
 
+test('student profile faculty can be updated', function () {
+    $user = User::factory()->create([
+        'role' => 'pelajar',
+        'matrik' => 'A123456',
+        'email' => 'a123456@siswa.ukm.edu.my',
+        'fakulti' => null,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->patch('/profile', [
+            'name' => 'Pelajar Fakulti',
+            'matrik' => 'A123456',
+            'fakulti' => 'Fakulti Undang-Undang',
+            'email' => 'a123456@siswa.ukm.edu.my',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/profile');
+
+    $user->refresh();
+
+    $this->assertSame('Fakulti Undang-Undang', $user->fakulti);
+});
+
+test('student dashboard profile card uses saved faculty and fixed academic session', function () {
+    $user = User::factory()->create([
+        'role' => 'pelajar',
+        'matrik' => 'A123456',
+        'email' => 'a123456@siswa.ukm.edu.my',
+        'fakulti' => 'Fakulti Undang-Undang',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.pelajar'))
+        ->assertOk()
+        ->assertSee('Fakulti Undang-Undang')
+        ->assertSee('Sesi Akademik')
+        ->assertSee('2025/2026')
+        ->assertDontSee('FTSM')
+        ->assertDontSee('Sains Komputer')
+        ->assertDontSee('Program');
+});
+
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
 

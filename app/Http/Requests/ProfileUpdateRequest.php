@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Support\StudentAcademicProfile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,6 +31,12 @@ class ProfileUpdateRequest extends FormRequest
 
         if ($this->user()?->role === 'pelajar') {
             $rules['matrik'] = ['required', 'string', 'max:50'];
+            $rules['fakulti'] = [
+                'required',
+                'string',
+                'max:255',
+                Rule::in(StudentAcademicProfile::faculties()),
+            ];
         }
 
         return $rules;

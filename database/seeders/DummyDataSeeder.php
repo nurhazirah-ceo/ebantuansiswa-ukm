@@ -13,6 +13,7 @@ use App\Models\PermohonanPelajar;
 use App\Models\Sumbangan;
 use App\Models\SumbanganItem;
 use App\Models\User;
+use App\Support\StudentAcademicProfile;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +70,7 @@ class DummyDataSeeder extends Seeder
     }
 
     /**
-     * @return array<int, array{user: User, matrik: string, faculty: string, program: string, year: string}>
+     * @return array<int, array{user: User, matrik: string, faculty: string, year: string}>
      */
     private function createStudentUsers(): array
     {
@@ -116,27 +117,19 @@ class DummyDataSeeder extends Seeder
             'Muhammad Rayyan Aqil',
         ];
 
-        $programs = [
-            ['faculty' => 'Fakulti Teknologi dan Sains Maklumat', 'program' => 'Sarjana Muda Sains Komputer'],
-            ['faculty' => 'Fakulti Ekonomi dan Pengurusan', 'program' => 'Sarjana Muda Pentadbiran Perniagaan'],
-            ['faculty' => 'Fakulti Sains Sosial dan Kemanusiaan', 'program' => 'Sarjana Muda Komunikasi Media'],
-            ['faculty' => 'Fakulti Pendidikan', 'program' => 'Sarjana Muda Pendidikan TESL'],
-            ['faculty' => 'Fakulti Kejuruteraan dan Alam Bina', 'program' => 'Sarjana Muda Kejuruteraan Elektrik'],
-            ['faculty' => 'Fakulti Sains dan Teknologi', 'program' => 'Sarjana Muda Sains Aktuari'],
-            ['faculty' => 'Fakulti Undang-Undang', 'program' => 'Sarjana Muda Undang-Undang'],
-            ['faculty' => 'Fakulti Sains Kesihatan', 'program' => 'Sarjana Muda Pemakanan'],
-        ];
+        $faculties = StudentAcademicProfile::faculties();
 
         $students = [];
 
         foreach ($names as $index => $name) {
             $matrik = 'A' . (197001 + $index);
-            $program = $programs[$index % count($programs)];
+            $faculty = $faculties[$index % count($faculties)];
             $year = 'Tahun ' . (($index % 4) + 1);
 
             $user = User::query()->create([
                 'name' => $name,
                 'matrik' => $matrik,
+                'fakulti' => $faculty,
                 'email' => strtolower($matrik) . '@siswa.ukm.edu.my',
                 'password' => Hash::make(self::DEFAULT_PASSWORD),
                 'role' => 'pelajar',
@@ -150,8 +143,7 @@ class DummyDataSeeder extends Seeder
             $students[] = [
                 'user' => $user,
                 'matrik' => $matrik,
-                'faculty' => $program['faculty'],
-                'program' => $program['program'],
+                'faculty' => $faculty,
                 'year' => $year,
             ];
         }
@@ -351,7 +343,7 @@ class DummyDataSeeder extends Seeder
     }
 
     /**
-     * @param array<int, array{user: User, matrik: string, faculty: string, program: string, year: string}> $students
+     * @param array<int, array{user: User, matrik: string, faculty: string, year: string}> $students
      * @return array<int, string>
      */
     private function createApplications(array $students, User $admin): array
@@ -458,7 +450,7 @@ class DummyDataSeeder extends Seeder
                 'email_ukm' => $student['user']->email,
                 'no_telefon' => '+601' . (($index % 8) + 1) . str_pad((string) (2300000 + ($index * 1379)), 7, '0', STR_PAD_LEFT),
                 'fakulti' => $student['faculty'],
-                'tahun_pengajian' => $student['year'] . ' - ' . $student['program'],
+                'tahun_pengajian' => StudentAcademicProfile::academicSession(),
                 'created_at' => $tarikhMohon,
                 'updated_at' => $tarikhMohon,
             ]);
@@ -468,9 +460,8 @@ class DummyDataSeeder extends Seeder
                 'jenis_bantuan' => $jenisBantuan,
                 'kategori_bantuan' => $kategoriBantuan,
                 'data' => [
-                    'program' => $student['program'],
                     'fakulti' => $student['faculty'],
-                    'semester' => $month <= 8 ? 'Semester 2 2025/2026' : 'Semester 1 2026/2027',
+                    'sesi_akademik' => StudentAcademicProfile::academicSession(),
                     'anggaran_kos' => $this->estimatedAidCost($jenisBantuan, $index),
                     'justifikasi' => $this->applicationNote($jenisBantuan),
                 ],

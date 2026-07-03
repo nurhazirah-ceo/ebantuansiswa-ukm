@@ -135,6 +135,25 @@
 
 {{-- ================= STYLE ================= --}}
 <style>
+#permohonanForm select{
+    -webkit-appearance:none;
+    -moz-appearance:none;
+    appearance:none;
+    padding-right:3rem;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364758b' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-size:1.25rem 1.25rem;
+    background-position:right 1.25rem center;
+}
+
+#permohonanForm select::-ms-expand{
+    display:none;
+}
+
+#permohonanForm select + .pointer-events-none.absolute{
+    display:none;
+}
+
 .step{
     width:40px;
     height:40px;
@@ -332,6 +351,23 @@ function validateActiveJustifikasiRingkas() {
     return true;
 }
 
+function scrollToApplicationFormTop() {
+    requestAnimationFrame(function () {
+        let target = document.getElementById('permohonanForm');
+
+        if (!target) {
+            return;
+        }
+
+        let prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        target.scrollIntoView({
+            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+            block: 'start'
+        });
+    });
+}
+
 function nextStep() {
     if (!validateCurrentStep()) {
         return;
@@ -355,8 +391,7 @@ function nextStep() {
         }
 
         updateStepUI();
-
-        
+        scrollToApplicationFormTop();
     }
 }
 
@@ -371,6 +406,7 @@ function prevStep() {
             .classList.remove('hidden', 'pointer-events-none');
 
         updateStepUI();
+        scrollToApplicationFormTop();
     }
 }
 
@@ -397,7 +433,7 @@ function validateCurrentStep() {
             }
         } else {
             if (field.value.trim() === '') {
-                showFieldError(field, 'Sila lengkapkan semua maklumat.');
+                showFieldError(field, field.dataset.profileRequiredMessage || 'Sila lengkapkan semua maklumat.');
                 return false;
             }
         }

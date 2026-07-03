@@ -63,7 +63,7 @@
                             value="{{ old('identifier') }}"
                             placeholder=""
                             required
-                            class="w-full rounded-lg border border-slate-300
+                            class="w-full rounded-lg border-2 border-slate-700
                                    px-4 py-2.5 text-sm
                                    focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                    transition"
@@ -80,7 +80,7 @@
                                 type="password"
                                 name="password"
                                 required
-                                class="w-full rounded-lg border border-slate-300
+                                class="w-full rounded-lg border-2 border-slate-700
                                        px-4 py-2.5 pr-11 text-sm
                                        focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                        transition"

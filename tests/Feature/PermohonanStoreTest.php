@@ -2,6 +2,7 @@
 
 use App\Models\Permohonan;
 use App\Models\PermohonanDokumen;
+use App\Models\Item;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -34,17 +35,7 @@ test('pelajar can submit a complete permohonan', function () {
             'penjaga_pendapatan' => 1500,
             'jenis_bantuan' => 'bantuan_asas_hidup',
             'kategori_bantuan' => 'keperluan_asas',
-            'bantuan_data' => [
-                'pakej' => 1,
-                'jumlah_ahli' => 0,
-                'nama_ketua' => 'Pelajar Ujian',
-                'no_matrik_ketua' => 'A123456',
-                'alamat_rumah' => 'Kolej Pendeta Zaaba, UKM',
-                'bandar' => 'Bangi',
-                'poskod' => '43600',
-                'negeri' => 'Selangor',
-                'jenis_kediaman' => 'Kolej Kediaman',
-            ],
+            'bantuan_data' => basicAidData(),
             'dokumen_wajib' => [
                 'dokumen_1' => UploadedFile::fake()->create('pendapatan.pdf', 100, 'application/pdf'),
                 'dokumen_2' => UploadedFile::fake()->create('alamat.pdf', 100, 'application/pdf'),
@@ -66,6 +57,7 @@ test('pelajar can submit a complete permohonan', function () {
     $this->assertDatabaseHas('permohonan_pelajar', [
         'nama_penuh' => 'Pelajar Ujian',
         'no_matrik' => 'A123456',
+        'fakulti' => 'Fakulti Teknologi dan Sains Maklumat',
         'tahun_pengajian' => 'Tahun 2',
     ]);
 
@@ -131,17 +123,7 @@ test('uploaded jpg application documents use clean document filenames', function
         ->post(route('permohonan.store'), stepThreePermohonanPayload([
             'jenis_bantuan' => 'bantuan_asas_hidup',
             'kategori_bantuan' => 'keperluan_asas',
-            'bantuan_data' => [
-                'pakej' => 1,
-                'jumlah_ahli' => 0,
-                'nama_ketua' => 'Pelajar Ujian',
-                'no_matrik_ketua' => 'A123456',
-                'alamat_rumah' => 'Kolej Pendeta Zaaba, UKM',
-                'bandar' => 'Bangi',
-                'poskod' => '43600',
-                'negeri' => 'Selangor',
-                'jenis_kediaman' => 'Kolej Kediaman',
-            ],
+            'bantuan_data' => basicAidData(),
             'dokumen_wajib' => [
                 'dokumen_1' => UploadedFile::fake()->create('gambar-pendapatan.jpg', 100, 'image/jpeg'),
                 'dokumen_2' => UploadedFile::fake()->create('gambar-alamat.jpg', 100, 'image/jpeg'),
@@ -204,17 +186,7 @@ test('tanggungan fields are saved from explicit form keys without using legacy p
                     'pendapatan' => 0,
                 ],
             ],
-            'bantuan_data' => [
-                'pakej' => 1,
-                'jumlah_ahli' => 0,
-                'nama_ketua' => 'Pelajar Ujian',
-                'no_matrik_ketua' => 'A123456',
-                'alamat_rumah' => 'Kolej Pendeta Zaaba, UKM',
-                'bandar' => 'Bangi',
-                'poskod' => '43600',
-                'negeri' => 'Selangor',
-                'jenis_kediaman' => 'Kolej Kediaman',
-            ],
+            'bantuan_data' => basicAidData(),
         ]));
 
     $response
@@ -276,7 +248,7 @@ test('validation errors are displayed without saving partial permohonan data', f
 
     $response
         ->assertRedirect(route('permohonan.index'))
-        ->assertSessionHasErrors('tahun_pengajian');
+        ->assertSessionHasErrors('nama_penuh');
 
     $this->get(route('permohonan.index'))
         ->assertOk()
@@ -287,6 +259,89 @@ test('validation errors are displayed without saving partial permohonan data', f
     $this->assertDatabaseCount('permohonan_keluarga', 0);
     $this->assertDatabaseCount('permohonan_bantuans', 0);
     $this->assertDatabaseCount('permohonan_dokumens', 0);
+});
+
+test('application step one uses profile faculty and year of study select', function () {
+    $user = User::factory()->create([
+        'role' => 'pelajar',
+        'matrik' => 'A123456',
+        'email' => 'a123456@siswa.ukm.edu.my',
+        'fakulti' => 'Fakulti Undang-Undang',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('permohonan.index'))
+        ->assertOk()
+        ->assertSee('Fakulti Undang-Undang')
+        ->assertSee('Tahun Pengajian')
+        ->assertSee('-- Pilih Tahun --')
+        ->assertSee('Tahun 1')
+        ->assertSee('Tahun 2')
+        ->assertSee('Tahun 3')
+        ->assertSee('Tahun 4')
+        ->assertDontSee('-- Pilih Fakulti --')
+        ->assertDontSee('Sesi Akademik')
+        ->assertDontSee('2025/2026');
+});
+
+test('application submission requires faculty in student profile', function () {
+    fakePrivateDocumentDisk();
+
+    $user = User::factory()->create([
+        'role' => 'pelajar',
+        'matrik' => 'A123456',
+        'email' => 'a123456@siswa.ukm.edu.my',
+        'fakulti' => null,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->from(route('permohonan.index'))
+        ->post(route('permohonan.store'), stepThreePermohonanPayload([
+            'jenis_bantuan' => 'bantuan_asas_hidup',
+            'kategori_bantuan' => 'keperluan_asas',
+            'bantuan_data' => basicAidData(),
+        ]));
+
+    $response
+        ->assertRedirect(route('permohonan.index'))
+        ->assertSessionHasErrors([
+            'fakulti' => 'Sila kemas kini fakulti dalam profil pelajar sebelum menghantar permohonan.',
+        ]);
+
+    $this->assertDatabaseCount('permohonans', 0);
+});
+
+test('application saves faculty from profile instead of submitted value', function () {
+    fakePrivateDocumentDisk();
+
+    $user = User::factory()->create([
+        'role' => 'pelajar',
+        'matrik' => 'A123456',
+        'email' => 'a123456@siswa.ukm.edu.my',
+        'fakulti' => 'Fakulti Undang-Undang',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->from(route('permohonan.index'))
+        ->post(route('permohonan.store'), stepThreePermohonanPayload([
+            'fakulti' => 'Fakulti Teknologi dan Sains Maklumat',
+            'tahun_pengajian' => 'Tahun 2',
+            'jenis_bantuan' => 'bantuan_asas_hidup',
+            'kategori_bantuan' => 'keperluan_asas',
+            'bantuan_data' => basicAidData(),
+        ]));
+
+    $response
+        ->assertRedirect(route('permohonan.index'))
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('permohonan_pelajar', [
+        'no_matrik' => 'A123456',
+        'fakulti' => 'Fakulti Undang-Undang',
+        'tahun_pengajian' => 'Tahun 2',
+    ]);
 });
 
 test('pelajar cannot submit permohonan identity that differs from authenticated account', function () {
@@ -304,17 +359,7 @@ test('pelajar cannot submit permohonan identity that differs from authenticated 
             'email_ukm' => 'a654321@siswa.ukm.edu.my',
             'jenis_bantuan' => 'bantuan_asas_hidup',
             'kategori_bantuan' => 'keperluan_asas',
-            'bantuan_data' => [
-                'pakej' => 1,
-                'jumlah_ahli' => 0,
-                'nama_ketua' => 'Pelajar Ujian',
-                'no_matrik_ketua' => 'A123456',
-                'alamat_rumah' => 'Kolej Pendeta Zaaba, UKM',
-                'bandar' => 'Bangi',
-                'poskod' => '43600',
-                'negeri' => 'Selangor',
-                'jenis_kediaman' => 'Kolej Kediaman',
-            ],
+            'bantuan_data' => basicAidData(),
         ]));
 
     $response
@@ -687,6 +732,39 @@ function stepThreePermohonanPayload(array $stepThree): array
             'dokumen_2' => UploadedFile::fake()->create('dokumen-2.pdf', 100, 'application/pdf'),
         ],
     ], $stepThree);
+}
+
+function basicAidData(array $overrides = []): array
+{
+    $package = basicPackageItem();
+
+    return array_merge([
+        'pakej_item_id' => $package->id,
+        'pakej' => $package->nama_item,
+        'jumlah_ahli' => 0,
+        'nama_ketua' => 'Pelajar Ujian',
+        'no_matrik_ketua' => 'A123456',
+        'alamat_rumah' => 'Kolej Pendeta Zaaba, UKM',
+        'bandar' => 'Bangi',
+        'poskod' => '43600',
+        'negeri' => 'Selangor',
+        'jenis_kediaman' => 'Kolej Kediaman',
+    ], $overrides);
+}
+
+function basicPackageItem(): Item
+{
+    return Item::create([
+        'nama_item' => 'Pakej 1 Orang',
+        'kategori' => 'keperluan',
+        'kategori_bantuan' => Item::CATEGORY_KEPERLUAN_ASAS,
+        'harga' => 50,
+        'stok_diperlukan' => 10,
+        'stok_disumbang' => 0,
+        'status' => 'aktif',
+        'is_active' => true,
+        'susunan' => 1,
+    ]);
 }
 
 function fakePrivateDocumentDisk(): void

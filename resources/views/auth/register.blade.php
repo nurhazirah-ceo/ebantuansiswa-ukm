@@ -49,7 +49,7 @@
                                        class="text-sm font-medium text-slate-700 mb-1" />
                         <x-text-input
                             id="name"
-                            class="w-full rounded-lg border border-slate-300
+                            class="w-full rounded-lg border-2 border-slate-700
                                    px-4 py-2.5 text-sm
                                    focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                    transition"
@@ -68,7 +68,7 @@
                                        class="text-sm font-medium text-slate-700 mb-1" />
                         <x-text-input
                             id="matrik"
-                            class="w-full rounded-lg border border-slate-300
+                            class="w-full rounded-lg border-2 border-slate-700
                                    px-4 py-2.5 text-sm
                                    focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                    transition"
@@ -91,7 +91,7 @@
                                        class="text-sm font-medium text-slate-700 mb-1" />
                         <x-text-input
                             id="email"
-                            class="w-full rounded-lg border border-slate-300
+                            class="w-full rounded-lg border-2 border-slate-700
                                    px-4 py-2.5 text-sm
                                    focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                    transition"
@@ -114,7 +114,7 @@
                         <div class="relative" data-password-field>
                             <x-text-input
                                 id="password"
-                                class="w-full rounded-lg border border-slate-300
+                                class="w-full rounded-lg border-2 border-slate-700
                                        px-4 py-2.5 pr-11 text-sm
                                        focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                        transition"
@@ -141,7 +141,7 @@
                         <div class="relative" data-password-field>
                             <x-text-input
                                 id="password_confirmation"
-                                class="w-full rounded-lg border border-slate-300
+                                class="w-full rounded-lg border-2 border-slate-700
                                        px-4 py-2.5 pr-11 text-sm
                                        focus:border-slate-800 focus:ring-1 focus:ring-slate-800
                                        transition"

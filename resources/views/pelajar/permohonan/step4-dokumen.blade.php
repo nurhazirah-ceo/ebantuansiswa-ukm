@@ -73,6 +73,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const form = step?.closest('form');
     const documentSection = document.getElementById('dynamic-document-section');
     let confirmedSubmit = false;
+    let confirmationPending = false;
+    let submissionStarted = false;
 
     function markRequiredDocumentInputs() {
         step?.querySelectorAll('input[type="file"][name^="dokumen_wajib"]').forEach(function (input) {
@@ -97,29 +99,70 @@ document.addEventListener('DOMContentLoaded', function () {
 
     markRequiredDocumentInputs();
 
-    form?.addEventListener('submit', function (event) {
-        if (confirmedSubmit) {
-            confirmedSubmit = false;
+    function showBrowserAlert(title, message) {
+        if (typeof window.alert === 'function') {
+            window.alert(title + '\n\n' + message);
+        }
+    }
+
+    function showSweetAlert(options) {
+        if (!window.Swal || typeof window.Swal.fire !== 'function') {
+            return null;
+        }
+
+        try {
+            return window.Swal.fire(options);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function submitFormOnce() {
+        if (submissionStarted) {
             return;
         }
 
-        event.preventDefault();
+        submissionStarted = true;
+        confirmedSubmit = true;
+        form.requestSubmit();
+    }
 
-        if (typeof validateActiveJustifikasiRingkas === 'function' && !validateActiveJustifikasiRingkas()) {
-            return;
+    function confirmWithBrowser() {
+        confirmationPending = false;
+
+        const isConfirmed = typeof window.confirm === 'function'
+            ? window.confirm('Hantar permohonan?\n\nPastikan semua maklumat dan dokumen adalah betul sebelum dihantar.')
+            : true;
+
+        if (isConfirmed) {
+            submitFormOnce();
         }
+    }
 
-        if (hasMissingRequiredDocuments()) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Dokumen belum lengkap',
-                text: 'Sila muat naik semua dokumen wajib sebelum menghantar permohonan.',
-                confirmButtonColor: '#071633'
+    function showMissingDocumentsMessage() {
+        const alert = showSweetAlert({
+            icon: 'warning',
+            title: 'Dokumen belum lengkap',
+            text: 'Sila muat naik semua dokumen wajib sebelum menghantar permohonan.',
+            confirmButtonColor: '#071633'
+        });
+
+        if (alert && typeof alert.catch === 'function') {
+            alert.catch(function () {
+                showBrowserAlert('Dokumen belum lengkap', 'Sila muat naik semua dokumen wajib sebelum menghantar permohonan.');
             });
             return;
         }
 
-        Swal.fire({
+        if (!alert) {
+            showBrowserAlert('Dokumen belum lengkap', 'Sila muat naik semua dokumen wajib sebelum menghantar permohonan.');
+        }
+    }
+
+    function confirmSubmission() {
+        confirmationPending = true;
+
+        const confirmation = showSweetAlert({
             icon: 'question',
             title: 'Hantar permohonan?',
             text: 'Pastikan semua maklumat dan dokumen adalah betul sebelum dihantar.',
@@ -128,12 +171,46 @@ document.addEventListener('DOMContentLoaded', function () {
             cancelButtonText: 'Batal',
             confirmButtonColor: '#16a34a',
             cancelButtonColor: '#64748b'
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                confirmedSubmit = true;
-                form.requestSubmit();
-            }
         });
+
+        if (confirmation && typeof confirmation.then === 'function') {
+            confirmation
+                .then(function (result) {
+                    confirmationPending = false;
+
+                    if (result.isConfirmed) {
+                        submitFormOnce();
+                    }
+                })
+                .catch(confirmWithBrowser);
+            return;
+        }
+
+        confirmWithBrowser();
+    }
+
+    form?.addEventListener('submit', function (event) {
+        if (confirmedSubmit) {
+            confirmedSubmit = false;
+            return;
+        }
+
+        event.preventDefault();
+
+        if (confirmationPending || submissionStarted) {
+            return;
+        }
+
+        if (typeof validateActiveJustifikasiRingkas === 'function' && !validateActiveJustifikasiRingkas()) {
+            return;
+        }
+
+        if (hasMissingRequiredDocuments()) {
+            showMissingDocumentsMessage();
+            return;
+        }
+
+        confirmSubmission();
     });
 });
 </script>
