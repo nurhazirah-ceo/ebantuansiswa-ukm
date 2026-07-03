@@ -63,7 +63,8 @@ test('donor dashboard keeps dana terkumpul global but recognition individual', f
         ->assertSeeInOrder([
             'Tahap Semasa',
             DonorRecognition::TIER_RAKAN_SOKONGAN,
-            'Jumlah sumbangan selesai: RM250.00',
+            'Jumlah sumbangan selesai:',
+            'RM250.00',
         ]);
 });
 

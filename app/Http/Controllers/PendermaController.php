@@ -665,24 +665,7 @@ class PendermaController extends Controller
     public function buktiAgihan(Sumbangan $sumbangan, Permohonan $permohonan)
     {
         abort_unless((int) $sumbangan->user_id === (int) Auth::id(), 404);
-        abort_unless($sumbangan->status === 'selesai', 403);
-
-        $permohonan->loadMissing('bantuan');
-
-        abort_unless($permohonan->status_agihan_key === Permohonan::STATUS_AGIHAN_SELESAI, 404);
-        abort_unless(filled($permohonan->bukti_agihan), 404);
-
-        $matchingCategories = Permohonan::kategoriBantuanMatchesForDonationCategories(
-            $this->donationCategoriesFor($sumbangan)
-        );
-
-        abort_unless(
-            in_array($permohonan->bantuan?->kategori_bantuan, $matchingCategories, true),
-            403
-        );
-        abort_unless(Storage::disk('local')->exists($permohonan->bukti_agihan), 404);
-
-        return Storage::disk('local')->response($permohonan->bukti_agihan);
+        abort(404);
     }
 
     public function toyyibPayCallback(Request $request)
@@ -778,45 +761,16 @@ class PendermaController extends Controller
 
     private function distributionImpactFor(Sumbangan $sumbangan)
     {
-        if ($sumbangan->status !== 'selesai') {
-            return collect();
-        }
+        $categoryText = collect($this->donationCategoriesFor($sumbangan))
+            ->map(fn (string $category) => Permohonan::kategoriBantuanLabel($category))
+            ->filter()
+            ->unique()
+            ->implode(', ');
 
-        $donationCategories = $this->donationCategoriesFor($sumbangan);
-        $matchingCategories = Permohonan::kategoriBantuanMatchesForDonationCategories($donationCategories);
-
-        if (empty($matchingCategories)) {
-            return collect();
-        }
-
-        return Permohonan::query()
-            ->with([
-                'pelajar:id,permohonan_id,nama_penuh,no_matrik,fakulti',
-                'bantuan:id,permohonan_id,jenis_bantuan,kategori_bantuan',
-            ])
-            ->where('status_agihan', Permohonan::STATUS_AGIHAN_SELESAI)
-            ->whereNotNull('tarikh_agihan')
-            ->whereHas('bantuan', function ($query) use ($matchingCategories) {
-                $query->whereIn('kategori_bantuan', $matchingCategories);
-            })
-            ->latest('tarikh_agihan')
-            ->latest('id')
-            ->get()
-            ->map(function (Permohonan $permohonan) use ($sumbangan) {
-                return [
-                    'id' => $permohonan->id,
-                    'masked_name' => $this->maskStudentName($permohonan->pelajar?->nama_penuh),
-                    'masked_no_matrik' => $this->maskNoMatrik($permohonan->pelajar?->no_matrik),
-                    'fakulti' => $permohonan->pelajar?->fakulti ?: '-',
-                    'jenis_bantuan' => Permohonan::jenisBantuanLabel($permohonan->bantuan?->jenis_bantuan ?? $permohonan->jenis_bantuan),
-                    'kategori_bantuan' => Permohonan::kategoriBantuanLabel($permohonan->bantuan?->kategori_bantuan),
-                    'tarikh_agihan' => $permohonan->tarikh_agihan?->format('d/m/Y h:i A') ?? '-',
-                    'status' => 'Telah Disalurkan',
-                    'bukti_url' => filled($permohonan->bukti_agihan)
-                        ? route('penderma.agihan-bukti', ['sumbangan' => $sumbangan, 'permohonan' => $permohonan])
-                        : null,
-                ];
-            });
+        return [
+            'category_text' => $categoryText !== '' ? $categoryText : 'kategori sumbangan ini',
+            'has_exact_mapping' => false,
+        ];
     }
 
     private function donationCategoriesFor(Sumbangan $sumbangan): array
@@ -831,37 +785,6 @@ class PendermaController extends Controller
             ->unique()
             ->values()
             ->all();
-    }
-
-    private function maskStudentName(?string $name): string
-    {
-        $parts = Str::of($name ?? '')
-            ->squish()
-            ->explode(' ')
-            ->filter(fn (string $part) => $part !== '')
-            ->values();
-
-        if ($parts->isEmpty()) {
-            return 'Pelajar';
-        }
-
-        return $parts
-            ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)) . '****')
-            ->implode(' ');
-    }
-
-    private function maskNoMatrik(?string $noMatrik): string
-    {
-        $clean = Str::of($noMatrik ?? '')
-            ->squish()
-            ->upper()
-            ->toString();
-
-        if ($clean === '') {
-            return '-';
-        }
-
-        return Str::substr($clean, 0, 3) . '****';
     }
 
     private function certificateLogoDataUri(): ?string

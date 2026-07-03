@@ -3,7 +3,7 @@
 @section('content')
 
 @php
-    $distributionImpact = $distributionImpact ?? collect();
+    $distributionImpact = $distributionImpact ?? [];
     $categoryLabels = collect(\App\Models\Item::DONATION_CATEGORIES)
         ->mapWithKeys(fn ($category, $key) => [$key => $category['title']]);
     $statusLabels = [
@@ -154,56 +154,16 @@
                         <div class="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-800">
                             Impak sumbangan akan dipaparkan selepas pembayaran sumbangan disahkan selesai.
                         </div>
-                    @elseif($distributionImpact->isEmpty())
+                    @elseif(empty($distributionImpact))
                         <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-600">
-                            Belum ada rekod agihan selesai yang sepadan dengan kategori sumbangan ini.
+                            <span class="font-semibold text-slate-800">Menunggu Agihan.</span>
+                            Maklumat penerima dan bukti agihan akan dipaparkan selepas admin melengkapkan agihan bantuan untuk kategori sumbangan ini.
                         </div>
                     @else
                         <div class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm leading-6 text-blue-800">
-                            Sebahagian sumbangan kategori ini telah disalurkan kepada pelajar yang layak.
-                        </div>
-
-                        <div class="mt-5 grid gap-4 lg:grid-cols-2">
-                            @foreach($distributionImpact as $impact)
-                                <div class="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-5 shadow-sm">
-                                    <div class="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-900">{{ $impact['masked_name'] }}</p>
-                                            <p class="mt-1 text-xs text-slate-500">{{ $impact['masked_no_matrik'] }}</p>
-                                        </div>
-                                        <span class="inline-flex shrink-0 items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                                            {{ $impact['status'] }}
-                                        </span>
-                                    </div>
-
-                                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                                        <div>
-                                            <p class="text-xs text-slate-400">Fakulti</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-700">{{ $impact['fakulti'] }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-slate-400">Tarikh Agihan</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-700">{{ $impact['tarikh_agihan'] }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-slate-400">Jenis Bantuan</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-700">{{ $impact['jenis_bantuan'] }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-slate-400">Kategori Bantuan</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-700">{{ $impact['kategori_bantuan'] }}</p>
-                                        </div>
-                                    </div>
-
-                                    @if($impact['bukti_url'])
-                                        <a href="{{ $impact['bukti_url'] }}"
-                                           target="_blank"
-                                           class="mt-4 inline-flex rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100">
-                                            Lihat Bukti Agihan
-                                        </a>
-                                    @endif
-                                </div>
-                            @endforeach
+                            <span class="font-semibold text-blue-900">Status agihan kategori.</span>
+                            Sumbangan anda telah diterima untuk {{ $distributionImpact['category_text'] ?? 'kategori bantuan ini' }}.
+                            Rekod penerima dan bukti agihan khusus tidak dipaparkan kerana sistem belum mempunyai pautan langsung antara resit sumbangan ini dengan rekod agihan pelajar.
                         </div>
                     @endif
                 </div>

@@ -89,9 +89,6 @@ class DashboardController extends Controller
             ->take(8)
             ->get()
             ->map(function (Sumbangan $sumbangan) {
-                $proof = $sumbangan->status === 'selesai'
-                    ? $this->proofForDonation($sumbangan)
-                    : null;
                 $transactionAt = $sumbangan->paid_at ?? $sumbangan->created_at;
 
                 return [
@@ -110,8 +107,8 @@ class DashboardController extends Controller
                         ? route('penderma.sumbangan.receipt', ['id' => $sumbangan->id])
                         : null,
                     'receipt_label' => 'Lihat Resit',
-                    'proof' => $proof,
-                    'proof_status' => $proof ? 'Bukti Tersedia' : 'Menunggu Agihan',
+                    'proof' => null,
+                    'proof_status' => 'Impak kategori',
                 ];
             });
 
@@ -424,45 +421,6 @@ class DashboardController extends Controller
             'completed_agihan_count' => $completedAgihanCount,
             'related_units' => $completedAgihanCount > 0 ? $totalCompletedItems : 0,
             'supported_categories' => $supportedCategoryLabels !== '' ? $supportedCategoryLabels : 'Belum ada kategori',
-        ];
-    }
-
-    private function proofForDonation(Sumbangan $sumbangan): ?array
-    {
-        $donationCategories = $sumbangan->items
-            ->pluck('kategori_bantuan')
-            ->filter()
-            ->unique()
-            ->values();
-
-        $matchingCategories = Permohonan::kategoriBantuanMatchesForDonationCategories($donationCategories);
-
-        if (empty($matchingCategories)) {
-            return null;
-        }
-
-        $permohonan = Permohonan::query()
-            ->with('bantuan:id,permohonan_id,kategori_bantuan')
-            ->where('status_agihan', Permohonan::STATUS_AGIHAN_SELESAI)
-            ->whereNotNull('tarikh_agihan')
-            ->whereNotNull('bukti_agihan')
-            ->whereHas('bantuan', fn ($query) => $query->whereIn('kategori_bantuan', $matchingCategories))
-            ->latest('tarikh_agihan')
-            ->latest('id')
-            ->first();
-
-        if (! $permohonan) {
-            return null;
-        }
-
-        $extension = strtolower(pathinfo($permohonan->bukti_agihan, PATHINFO_EXTENSION));
-
-        return [
-            'url' => route('penderma.agihan-bukti', ['sumbangan' => $sumbangan, 'permohonan' => $permohonan]),
-            'category' => Permohonan::kategoriBantuanLabel($permohonan->bantuan?->kategori_bantuan),
-            'date' => $permohonan->tarikh_agihan?->format('d/m/Y h:i A') ?? '-',
-            'extension' => $extension,
-            'is_image' => in_array($extension, ['jpg', 'jpeg', 'png'], true),
         ];
     }
 

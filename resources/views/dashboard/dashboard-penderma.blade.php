@@ -356,17 +356,6 @@
                                                 Resit
                                             </span>
                                         @endif
-                                    @elseif($record['proof'])
-                                        <button type="button"
-                                                data-open-proof-modal
-                                                data-proof-url="{{ $record['proof']['url'] }}"
-                                                data-proof-category="{{ $record['proof']['category'] }}"
-                                                data-proof-date="{{ $record['proof']['date'] }}"
-                                                data-proof-extension="{{ $record['proof']['extension'] }}"
-                                                data-proof-is-image="{{ $record['proof']['is_image'] ? '1' : '0' }}"
-                                                class="inline-flex items-center justify-center rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm transition hover:bg-blue-50">
-                                            Bukti Agihan
-                                        </button>
                                     @elseif($record['receipt_url'])
                                         <a href="{{ $record['receipt_url'] }}"
                                            class="inline-flex items-center justify-center rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm transition hover:bg-blue-50">
@@ -405,17 +394,6 @@
                                             Resit
                                         </span>
                                     @endif
-                                @elseif($record['proof'])
-                                    <button type="button"
-                                            data-open-proof-modal
-                                            data-proof-url="{{ $record['proof']['url'] }}"
-                                            data-proof-category="{{ $record['proof']['category'] }}"
-                                            data-proof-date="{{ $record['proof']['date'] }}"
-                                            data-proof-extension="{{ $record['proof']['extension'] }}"
-                                            data-proof-is-image="{{ $record['proof']['is_image'] ? '1' : '0' }}"
-                                            class="inline-flex items-center justify-center rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">
-                                        Bukti Agihan
-                                    </button>
                                 @elseif($record['receipt_url'])
                                     <a href="{{ $record['receipt_url'] }}"
                                        class="inline-flex items-center justify-center rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">
@@ -587,25 +565,6 @@
     </div>
 </div>
 
-<div id="proofModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/60 px-4 py-6">
-    <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-900">Bukti Agihan</h2>
-                <p class="mt-1 text-sm text-slate-500" id="proofModalMeta">-</p>
-            </div>
-            <button type="button" data-close-proof-modal class="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-200">
-                Tutup
-            </button>
-        </div>
-
-        <div class="min-h-0 flex-1 overflow-auto bg-slate-50 p-6">
-            <img id="proofModalImage" src="" alt="Bukti agihan" class="hidden max-h-[65vh] w-full rounded-2xl border border-slate-200 bg-white object-contain">
-            <iframe id="proofModalPdf" src="" title="Bukti agihan PDF" class="hidden h-[65vh] w-full rounded-2xl border border-slate-200 bg-white"></iframe>
-        </div>
-    </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const donorCampaignSlider = document.getElementById('donorCampaignSlider');
@@ -717,10 +676,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const recognitionModal = document.getElementById('recognitionModal');
-    const proofModal = document.getElementById('proofModal');
-    const proofImage = document.getElementById('proofModalImage');
-    const proofPdf = document.getElementById('proofModalPdf');
-    const proofMeta = document.getElementById('proofModalMeta');
 
     document.querySelector('[data-open-recognition-modal]')?.addEventListener('click', function () {
         recognitionModal.classList.remove('hidden');
@@ -730,37 +685,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('[data-close-recognition-modal]')?.addEventListener('click', function () {
         recognitionModal.classList.add('hidden');
         recognitionModal.classList.remove('flex');
-    });
-
-    document.querySelectorAll('[data-open-proof-modal]').forEach(function (button) {
-        button.addEventListener('click', function () {
-            const proofUrl = button.dataset.proofUrl;
-            const isImage = button.dataset.proofIsImage === '1';
-            const category = button.dataset.proofCategory || '-';
-            const date = button.dataset.proofDate || '-';
-
-            proofMeta.textContent = category + ' • ' + date;
-            proofImage.classList.toggle('hidden', !isImage);
-            proofPdf.classList.toggle('hidden', isImage);
-
-            if (isImage) {
-                proofImage.src = proofUrl;
-                proofPdf.src = '';
-            } else {
-                proofPdf.src = proofUrl;
-                proofImage.src = '';
-            }
-
-            proofModal.classList.remove('hidden');
-            proofModal.classList.add('flex');
-        });
-    });
-
-    document.querySelector('[data-close-proof-modal]')?.addEventListener('click', function () {
-        proofModal.classList.add('hidden');
-        proofModal.classList.remove('flex');
-        proofImage.src = '';
-        proofPdf.src = '';
     });
 
     document.querySelector('[data-confirm-certificate-download]')?.addEventListener('click', function (event) {
