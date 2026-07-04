@@ -143,9 +143,9 @@
                 <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div>
                         <div>
-                            <h2 class="text-lg font-semibold text-slate-900">Status Penyaluran / Impak Sumbangan</h2>
+                            <h2 class="text-lg font-semibold text-slate-900">Maklumat Agihan Sumbangan</h2>
                             <p class="text-sm leading-6 text-slate-500 mt-2">
-                                Paparan ini menunjukkan ringkasan sumbangan mengikut kategori bantuan.
+                                Paparan ini menerangkan proses agihan bagi sumbangan yang telah anda berikan.
                             </p>
                         </div>
                     </div>
@@ -160,10 +160,16 @@
                             Maklumat penerima dan bukti agihan akan dipaparkan selepas admin melengkapkan agihan bantuan untuk kategori sumbangan ini.
                         </div>
                     @else
-                        <div class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm leading-6 text-blue-800">
-                            <span class="font-semibold text-blue-900">Status agihan kategori.</span>
-                            Sumbangan anda telah diterima untuk {{ $distributionImpact['category_text'] ?? 'kategori bantuan ini' }}.
-                            Rekod penerima dan bukti agihan khusus tidak dipaparkan kerana sistem belum mempunyai pautan langsung antara resit sumbangan ini dengan rekod agihan pelajar.
+                        <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm leading-6 text-emerald-800">
+                            <div class="flex gap-3">
+                                <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M9 12.75 11.25 15 15 9.75" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                                <p>
+                                    Terima kasih atas sumbangan anda. Setiap sumbangan yang diterima akan diuruskan oleh pihak pentadbir dan disalurkan kepada pelajar yang layak mengikut kategori bantuan. Semoga sumbangan ini dapat memberikan manfaat kepada pelajar yang memerlukan.
+                                </p>
+                            </div>
                         </div>
                     @endif
                 </div>
