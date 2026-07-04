@@ -83,7 +83,7 @@ class PermohonanController extends Controller
             'penjaga_hubungan' => 'required|string|max:100',
             'penjaga_telefon' => ['required', 'regex:/^01[0-9]{8,9}$/'],
             'penjaga_pekerjaan' => 'required|string|max:255',
-            'penjaga_pendapatan' => 'required|numeric|min:0',
+            'penjaga_pendapatan' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
 
             'tanggungan' => 'nullable|array',
             'tanggungan.*.nama' => 'required|string|max:255',
@@ -91,7 +91,7 @@ class PermohonanController extends Controller
             'tanggungan.*.umur' => 'nullable|integer|min:0|max:120',
             'tanggungan.*.status' => 'nullable|string|max:100',
             'tanggungan.*.kesihatan' => 'nullable|string|max:100',
-            'tanggungan.*.pendapatan' => 'nullable|numeric|min:0',
+            'tanggungan.*.pendapatan' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
 
             // STEP 3
             'jenis_bantuan' => 'required|string|in:bantuan_asas_hidup,bantuan_pembelajaran,bantuan_sukan,bantuan_musibah',

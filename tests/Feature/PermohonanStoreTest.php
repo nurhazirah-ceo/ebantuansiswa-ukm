@@ -261,6 +261,36 @@ test('validation errors are displayed without saving partial permohonan data', f
     $this->assertDatabaseCount('permohonan_dokumens', 0);
 });
 
+test('income above decimal column limit returns validation error without saving', function () {
+    fakePrivateDocumentDisk();
+
+    $user = User::factory()->create([
+        'role' => 'pelajar',
+        'matrik' => 'A123456',
+        'email' => 'a123456@siswa.ukm.edu.my',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->from(route('permohonan.index'))
+        ->post(route('permohonan.store'), stepThreePermohonanPayload([
+            'penjaga_pendapatan' => 100000000,
+            'jenis_bantuan' => 'bantuan_asas_hidup',
+            'kategori_bantuan' => 'keperluan_asas',
+            'bantuan_data' => basicAidData(),
+        ]));
+
+    $response
+        ->assertRedirect(route('permohonan.index'))
+        ->assertSessionHasErrors('penjaga_pendapatan');
+
+    $this->assertDatabaseCount('permohonans', 0);
+    $this->assertDatabaseCount('permohonan_pelajar', 0);
+    $this->assertDatabaseCount('permohonan_keluarga', 0);
+    $this->assertDatabaseCount('permohonan_bantuans', 0);
+    $this->assertDatabaseCount('permohonan_dokumens', 0);
+});
+
 test('application step one uses profile faculty and year of study select', function () {
     $user = User::factory()->create([
         'role' => 'pelajar',

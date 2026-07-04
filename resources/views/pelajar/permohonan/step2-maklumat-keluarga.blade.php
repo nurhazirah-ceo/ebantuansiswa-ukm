@@ -190,6 +190,7 @@
                 value="{{ old('penjaga_pendapatan') }}"
                 required
                 min="0"
+                max="99999999.99"
                 step="0.01"
                 inputmode="decimal"
                 oninput="this.value = this.value.replace(/[^0-9.]/g, ''); calculateIncome();"
@@ -359,6 +360,11 @@
 
                         <input type="number"
                                id="fam_income"
+                               min="0"
+                               max="99999999.99"
+                               step="0.01"
+                               inputmode="decimal"
+                               oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
                                class="w-full h-12 px-4 border border-slate-300 bg-white rounded-xl text-sm shadow-sm"
                                placeholder="0.00">
                     </div>
