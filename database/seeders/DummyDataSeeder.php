@@ -385,9 +385,11 @@ class DummyDataSeeder extends Seeder
             $student = $students[$index % count($students)];
             $jenisBantuan = $jenisPlan[$index % count($jenisPlan)];
             $status = $statusPlan[$index];
-            $month = ($index % 12) + 1;
-            $day = [5, 11, 18, 24][$index % 4];
-            $tarikhMohon = Carbon::create(2026, $month, min($day, Carbon::create(2026, $month, 1)->daysInMonth), 9 + ($index % 7), 15, 0);
+            $tarikhMohon = Carbon::create(2026, 7, 9, 9 + ($index % 7), 15, 0)->subDays($index);
+            $adminReviewDate = in_array($status, ['Diluluskan', 'Ditolak', 'Gagal'], true)
+                ? $tarikhMohon->copy()->addDays(5)->setTime(11, 0)
+                : null;
+            $lastActivityAt = $adminReviewDate?->copy() ?? $tarikhMohon->copy()->addHours(2);
             $kategoriBantuan = $this->kategoriForJenisBantuan($jenisBantuan, $index);
             $prefix = $this->permohonanPrefix($jenisBantuan);
 
@@ -403,13 +405,15 @@ class DummyDataSeeder extends Seeder
 
                 if ($agihanStatus === Permohonan::STATUS_AGIHAN_SEDANG_DIAGIH) {
                     $catatanAgihan = 'Agihan sedang diselaraskan bersama kolej kediaman.';
+                    $lastActivityAt = $adminReviewDate->copy()->addDay()->setTime(10, 30);
                 }
 
                 if ($agihanStatus === Permohonan::STATUS_AGIHAN_SELESAI) {
-                    $tarikhAgihan = $tarikhMohon->copy()->addDays(9)->setTime(14, 30);
+                    $tarikhAgihan = $adminReviewDate->copy()->addDays(4)->setTime(14, 30);
                     $catatanAgihan = 'Bantuan telah diserahkan kepada pelajar dan direkodkan sebagai data dummy.';
                     $buktiAgihan = sprintf('agihan-bukti/dummy-agihan-%04d.pdf', $approvedIndex + 1);
                     $proofPaths[] = $buktiAgihan;
+                    $lastActivityAt = $tarikhAgihan->copy();
                 }
 
                 $approvedIndex++;
@@ -430,18 +434,21 @@ class DummyDataSeeder extends Seeder
                 'admin_catatan' => $status === 'Ditolak' || $status === 'Gagal'
                     ? 'Dokumen sokongan atau justifikasi tidak mencukupi untuk kelulusan.'
                     : ($status === 'Diluluskan' ? 'Permohonan memenuhi kriteria bantuan pelajar.' : null),
-                'admin_review_date' => $status === 'Diluluskan' || $status === 'Ditolak' || $status === 'Gagal'
-                    ? $tarikhMohon->copy()->addDays(5)->setTime(11, 0)
-                    : null,
+                'admin_review_date' => $adminReviewDate,
                 'pakej' => $jenisBantuan === 'bantuan_asas_hidup' ? ['Pakej 1 Orang', 'Pakej 3 Orang', 'Pakej 5 Orang'][$index % 3] : null,
                 'jumlah_ahli' => $jenisBantuan === 'bantuan_asas_hidup' ? [1, 3, 5][$index % 3] : null,
                 'nama_group' => $jenisBantuan === 'bantuan_pembelajaran' ? 'Kumpulan Tutorial ' . chr(65 + ($index % 6)) : null,
                 'bilangan_ahli' => $jenisBantuan === 'bantuan_pembelajaran' ? 2 + ($index % 4) : null,
                 'kategori' => $jenisBantuan === 'bantuan_sukan' ? ['Kelab Sukan UKM', 'Kolej Kediaman', 'Pasukan Fakulti'][$index % 3] : null,
                 'organisasi' => $jenisBantuan === 'bantuan_sukan' ? ['Kelab Badminton UKM', 'Kolej Pendeta Zaaba', 'Fakulti Sains Kesihatan'][$index % 3] : null,
-                'created_at' => $tarikhMohon,
-                'updated_at' => $tarikhMohon->copy()->addHours(2),
             ]);
+
+            Permohonan::withoutTimestamps(function () use ($permohonan, $tarikhMohon, $lastActivityAt): void {
+                $permohonan->forceFill([
+                    'created_at' => $tarikhMohon,
+                    'updated_at' => $lastActivityAt,
+                ])->save();
+            });
 
             PermohonanPelajar::query()->create([
                 'permohonan_id' => $permohonan->id,
