@@ -8,6 +8,7 @@
 
     $monthlyApprovedData = $monthlyApprovedData ?? array_fill(0, 12, 0);
     $monthlyRejectedData = $monthlyRejectedData ?? array_fill(0, 12, 0);
+    $latestApplicationsSearch = $latestApplicationsSearch ?? '';
 @endphp
 
 <div class="report-page min-h-screen bg-slate-50 py-8">
@@ -61,14 +62,31 @@
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-950">Permohonan Terkini</h2>
-                    <p class="mt-1 text-sm text-slate-500">Rekod terbaru daripada database.</p>
+            <div class="mb-5 space-y-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-950">Permohonan Terkini</h2>
+                        <p class="mt-1 text-sm text-slate-500">Rekod terbaru daripada database.</p>
+                    </div>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        {{ $latestApplications->count() }} rekod
+                    </span>
                 </div>
-                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {{ $latestApplications->count() }} rekod
-                </span>
+
+                <form method="GET" action="{{ route('admin.statistik.permohonan') }}" class="no-print flex w-full flex-col gap-2 sm:flex-row lg:max-w-3xl">
+                    <label for="latest-application-search" class="sr-only">Cari permohonan terkini</label>
+                    <input id="latest-application-search"
+                           type="search"
+                           name="q_terkini"
+                           value="{{ $latestApplicationsSearch }}"
+                           placeholder="Cari nama pelajar, no matrik, no kelompok, kategori atau status"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:flex-1">
+
+                    <button type="submit"
+                            class="inline-flex items-center justify-center rounded-2xl bg-[#3155E7] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2647D6]">
+                        Cari
+                    </button>
+                </form>
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-slate-200">

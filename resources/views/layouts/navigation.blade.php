@@ -156,11 +156,6 @@
                                             'href' => Route::has('admin.agihan.index') ? route('admin.agihan.index') : '#',
                                             'active' => request()->routeIs('admin.agihan.*'),
                                         ],
-                                        [
-                                            'title' => 'Status Permohonan',
-                                            'href' => Route::has('admin.permohonan.status') ? route('admin.permohonan.status') : '#',
-                                            'active' => request()->routeIs('admin.permohonan.status'),
-                                        ],
                                     ],
                                 ],
                                 [
@@ -376,11 +371,6 @@
             <x-responsive-nav-link :href="Route::has('admin.agihan.index') ? route('admin.agihan.index') : '#'"
                                    :active="request()->routeIs('admin.agihan.*')">
                 Agihan Bantuan
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="Route::has('admin.permohonan.status') ? route('admin.permohonan.status') : '#'"
-                                   :active="request()->routeIs('admin.permohonan.status')">
-                Status Permohonan
             </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="Route::has('admin.penderma.landing') ? route('admin.penderma.landing') : (Route::has('admin.penderma.index') ? route('admin.penderma.index') : '#')"

@@ -7,10 +7,18 @@
     $formatLabel = fn ($value) => filled($value)
         ? \Illuminate\Support\Str::of($value)->replace(['_', '-'], ' ')->squish()->title()
         : '-';
+    $filters = $filters ?? ['q' => '', 'category' => '', 'status' => ''];
+    $categoryOptions = $categoryOptions ?? \App\Models\Permohonan::KATEGORI_BANTUAN_LABELS;
 
     $statusBelum = \App\Models\Permohonan::STATUS_AGIHAN_BELUM_DIAGIH;
     $statusSedang = \App\Models\Permohonan::STATUS_AGIHAN_SEDANG_DIAGIH;
     $statusSelesai = \App\Models\Permohonan::STATUS_AGIHAN_SELESAI;
+    $statusFilterOptions = $statusFilterOptions ?? [
+        $statusBelum => 'Menunggu Agihan',
+        $statusSedang => 'Dalam Penghantaran',
+        $statusSelesai => 'Selesai Disalurkan',
+    ];
+    $hasActiveFilters = collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty();
 
     $workflowLabels = [
         $statusBelum => [
@@ -90,56 +98,6 @@
             </div>
         @endif
 
-        <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            @foreach($distributionStats as $stat)
-                @php
-                    $percentage = $totalDistribution > 0 ? round(($stat['value'] / $totalDistribution) * 100, 1) : 0;
-                @endphp
-                <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div class="flex items-start justify-between gap-4">
-                        <p class="text-sm font-medium text-slate-500">{{ $stat['label'] }}</p>
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $stat['class'] }}">
-                            {{ $stat['badge'] }}
-                        </span>
-                    </div>
-                    <div class="mt-5 flex items-end justify-between">
-                        <h2 class="text-4xl font-extrabold text-slate-950">{{ $stat['value'] }}</h2>
-                        <span class="text-sm font-semibold text-slate-500">{{ $percentage }}%</span>
-                    </div>
-                </div>
-            @endforeach
-        </section>
-
-        <section class="grid gap-6 xl:grid-cols-5">
-            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
-                <h2 class="text-lg font-bold text-slate-950">Status Agihan Bantuan</h2>
-                <p class="mt-1 text-sm text-slate-500">Pecahan permohonan yang menunggu, sedang diurus, dan telah selesai disalurkan.</p>
-                <div class="mx-auto mt-6 max-w-md">
-                    <canvas id="distributionStatusChart" data-chart='@json($distributionChart)'></canvas>
-                </div>
-            </div>
-
-            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-3">
-                <h2 class="text-lg font-bold text-slate-950">Panduan Aliran Kerja</h2>
-                <p class="mt-1 text-sm text-slate-500">Setiap rekod bergerak daripada kelulusan kepada agihan aktif sebelum disahkan selesai.</p>
-
-                <div class="mt-6 grid gap-4 md:grid-cols-3">
-                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                        <p class="text-sm font-bold text-emerald-800">Diluluskan</p>
-                        <p class="mt-2 text-xs leading-5 text-emerald-700">Permohonan masuk automatik ke senarai agihan selepas admin meluluskan.</p>
-                    </div>
-                    <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                        <p class="text-sm font-bold text-blue-800">Dalam Penghantaran</p>
-                        <p class="mt-2 text-xs leading-5 text-blue-700">Admin mula agihan dan melengkapkan bukti serahan serta catatan.</p>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p class="text-sm font-bold text-slate-800">Selesai Disalurkan</p>
-                        <p class="mt-2 text-xs leading-5 text-slate-600">Tarikh agihan, pegawai, bukti, dan notifikasi pelajar direkodkan.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 px-6 py-5">
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -151,7 +109,91 @@
                         {{ $agihanRows->count() }} rekod
                     </span>
                 </div>
+
+                <div class="mt-5">
+                    <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                        @foreach($distributionStats as $stat)
+                            @php
+                                $percentage = $totalDistribution > 0 ? round(($stat['value'] / $totalDistribution) * 100, 1) : 0;
+                            @endphp
+                            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                                <div class="flex items-start justify-between gap-4">
+                                    <p class="text-sm font-medium text-slate-500">{{ $stat['label'] }}</p>
+                                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $stat['class'] }}">
+                                        {{ $stat['badge'] }}
+                                    </span>
+                                </div>
+                                <div class="mt-5 flex items-end justify-between">
+                                    <h2 class="text-4xl font-extrabold text-slate-950">{{ $stat['value'] }}</h2>
+                                    <span class="text-sm font-semibold text-slate-500">{{ $percentage }}%</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </section>
+                </div>
             </div>
+
+            <form method="GET" action="{{ route('admin.agihan.index') }}" class="border-b border-slate-200 bg-slate-50/70 px-6 py-5">
+                <div class="grid gap-4 lg:grid-cols-[1.3fr_0.9fr_0.9fr_auto] lg:items-end">
+                    <div>
+                        <label for="agihanSearch" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Cari
+                        </label>
+                        <input id="agihanSearch"
+                               type="search"
+                               name="q"
+                               value="{{ $filters['q'] }}"
+                               placeholder="Nama pelajar, no matrik atau no permohonan"
+                               class="mt-2 w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
+                    </div>
+
+                    <div>
+                        <label for="agihanCategory" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Kategori
+                        </label>
+                        <select id="agihanCategory"
+                                name="category"
+                                class="mt-2 w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
+                            <option value="">Semua kategori</option>
+                            @foreach($categoryOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($filters['category'] === $value)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="agihanStatus" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Status
+                        </label>
+                        <select id="agihanStatus"
+                                name="status"
+                                class="mt-2 w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
+                            <option value="">Semua status</option>
+                            @foreach($statusFilterOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($filters['status'] === $value)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="submit"
+                                class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-[#071633] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#102544] lg:flex-none">
+                            Tapis
+                        </button>
+
+                        @if($hasActiveFilters)
+                            <a href="{{ route('admin.agihan.index') }}"
+                               class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 lg:flex-none">
+                                Reset
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </form>
 
             <div class="divide-y divide-slate-200">
                 @forelse($agihanRows as $row)
@@ -160,12 +202,13 @@
                         $kategoriBantuan = $row->bantuan?->kategori_bantuan;
                         $statusKey = $row->status_agihan_key;
                         $workflow = $workflowLabels[$statusKey] ?? $workflowLabels[$statusBelum];
+                        $proofAvailable = filled($row->bukti_agihan) && (bool) $row->bukti_agihan_exists;
                         $proofExtension = filled($row->bukti_agihan)
                             ? strtolower(pathinfo($row->bukti_agihan, PATHINFO_EXTENSION))
                             : null;
                         $proofIsImage = in_array($proofExtension, ['jpg', 'jpeg', 'png'], true);
-                        $proofUrl = filled($row->bukti_agihan) ? route('admin.agihan.bukti', $row) : null;
-                        $proofDownloadUrl = filled($row->bukti_agihan) ? route('admin.agihan.bukti', ['permohonan' => $row, 'download' => 1]) : null;
+                        $proofUrl = $proofAvailable ? route('admin.agihan.bukti', $row) : null;
+                        $proofDownloadUrl = $proofAvailable ? route('admin.agihan.bukti', ['permohonan' => $row, 'download' => 1]) : null;
                     @endphp
 
                     <article class="p-6 transition hover:bg-slate-50">
@@ -250,9 +293,13 @@
                                 </div>
 
                                 <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                                    @if(filled($row->bukti_agihan))
+                                    @if($proofAvailable)
                                         <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
                                             Bukti telah dimuat naik
+                                        </span>
+                                    @elseif(filled($row->bukti_agihan))
+                                        <span class="rounded-full bg-rose-50 px-3 py-1 text-rose-700">
+                                            Bukti tidak dijumpai dalam storan
                                         </span>
                                     @else
                                         <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
@@ -338,7 +385,7 @@
                                             </p>
                                         @endif
 
-                                        @if(filled($row->bukti_agihan))
+                                        @if($proofAvailable)
                                             <button type="button"
                                                     data-proof-preview
                                                     data-proof-url="{{ $proofUrl }}"
@@ -348,6 +395,10 @@
                                                     class="inline-flex w-full items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100">
                                                 Lihat Bukti
                                             </button>
+                                        @elseif(filled($row->bukti_agihan))
+                                            <p class="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold leading-6 text-rose-700">
+                                                Bukti agihan tidak dijumpai dalam storan. Sila muat naik semula bukti jika perlu.
+                                            </p>
                                         @endif
                                     </div>
                                 @endif
@@ -357,17 +408,19 @@
                 @empty
                     <div class="px-6 py-12 text-center">
                         <div class="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8">
-                            <p class="text-sm font-semibold text-slate-700">Tiada permohonan diluluskan untuk agihan bantuan.</p>
+                            <p class="text-sm font-semibold text-slate-700">
+                                {{ $hasActiveFilters ? 'Tiada rekod agihan yang sepadan dengan tapisan.' : 'Tiada permohonan diluluskan untuk agihan bantuan.' }}
+                            </p>
                             <p class="mt-2 text-sm text-slate-500">Rekod akan muncul di sini selepas admin meluluskan permohonan pelajar.</p>
                         </div>
                     </div>
                 @endforelse
             </div>
         </section>
+
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('[data-proof-preview]').forEach(function (button) {
@@ -413,85 +466,6 @@
                 });
             });
         });
-
-        const distributionChart = document.getElementById('distributionStatusChart');
-
-        if (distributionChart) {
-            const distributionChartData = JSON.parse(distributionChart.dataset.chart);
-            const distributionLabels = distributionChartData.labels;
-            const distributionData = distributionChartData.data;
-            const distributionColors = distributionChartData.colors;
-            const totalDistribution = distributionData.reduce((sum, value) => sum + value, 0);
-
-            const centerTextPlugin = {
-                id: 'centerText',
-                beforeDraw(chart) {
-                    const chartArea = chart.chartArea;
-                    if (!chartArea) return;
-
-                    const ctx = chart.ctx;
-                    const centerX = (chartArea.left + chartArea.right) / 2;
-                    const centerY = (chartArea.top + chartArea.bottom) / 2;
-
-                    ctx.save();
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.font = '700 28px Arial';
-                    ctx.fillStyle = '#0f172a';
-                    ctx.fillText(totalDistribution, centerX, centerY - 6);
-                    ctx.font = '500 12px Arial';
-                    ctx.fillStyle = '#64748b';
-                    ctx.fillText('Jumlah', centerX, centerY + 16);
-                    ctx.restore();
-                }
-            };
-
-            new Chart(distributionChart, {
-                type: 'doughnut',
-                data: {
-                    labels: distributionLabels,
-                    datasets: [{
-                        data: distributionData,
-                        backgroundColor: distributionColors,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    cutout: '72%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 16,
-                                color: '#475569',
-                                generateLabels(chart) {
-                                    const dataset = chart.data.datasets[0];
-
-                                    return chart.data.labels.map((label, index) => {
-                                        const value = dataset.data[index];
-                                        const percentage = totalDistribution > 0
-                                            ? ((value / totalDistribution) * 100).toFixed(1)
-                                            : 0;
-
-                                        return {
-                                            text: `${label} (${percentage}%)`,
-                                            fillStyle: dataset.backgroundColor[index],
-                                            strokeStyle: dataset.backgroundColor[index],
-                                            lineWidth: 0,
-                                            hidden: false,
-                                            index
-                                        };
-                                    });
-                                }
-                            }
-                        }
-                    }
-                },
-                plugins: [centerTextPlugin]
-            });
-        }
     });
 </script>
 @endsection

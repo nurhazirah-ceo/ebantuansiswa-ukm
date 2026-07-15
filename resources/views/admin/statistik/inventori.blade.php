@@ -3,6 +3,10 @@
 @section('page-title', 'Statistik Inventori')
 
 @section('content')
+@php
+    $attentionItemsSearch = $attentionItemsSearch ?? '';
+@endphp
+
 <div class="report-page min-h-screen bg-slate-50 py-8">
     <div class="mx-auto max-w-7xl space-y-7 px-6">
         <x-page-hero
@@ -54,12 +58,29 @@
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-950">Item Stok Rendah / Habis</h2>
-                    <p class="mt-1 text-sm text-slate-500">Item yang perlu disemak oleh admin.</p>
+            <div class="mb-5 space-y-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-950">Item Stok Rendah / Habis</h2>
+                        <p class="mt-1 text-sm text-slate-500">Item yang perlu disemak oleh admin.</p>
+                    </div>
+                    <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">{{ $attentionItems->count() }} item</span>
                 </div>
-                <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">{{ $attentionItems->count() }} item</span>
+
+                <form method="GET" action="{{ route('admin.statistik.inventori') }}" class="no-print flex w-full flex-col gap-2 sm:flex-row lg:max-w-3xl">
+                    <label for="attention-item-search" class="sr-only">Cari item stok rendah atau habis</label>
+                    <input id="attention-item-search"
+                           type="search"
+                           name="q_inventori"
+                           value="{{ $attentionItemsSearch }}"
+                           placeholder="Cari item, kategori atau status stok"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:flex-1">
+
+                    <button type="submit"
+                            class="inline-flex items-center justify-center rounded-2xl bg-[#3155E7] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2647D6]">
+                        Cari
+                    </button>
+                </form>
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-slate-200">

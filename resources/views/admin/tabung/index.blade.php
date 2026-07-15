@@ -17,6 +17,19 @@
     ];
     $targetErrors = $errors ?? new \Illuminate\Support\ViewErrorBag;
     $targetInputValue = old('target_amount', number_format((float) ($tabungTarget ?? 1000000), 2, '.', ''));
+    $status = $status ?? null;
+    $q = $q ?? '';
+    $activeTransactionFilters = [];
+    $statusFilterQuery = filled($q) ? ['q' => $q] : [];
+    $statusOnlyQuery = filled($status) ? ['status' => $status] : [];
+
+    if (filled($status)) {
+        $activeTransactionFilters['status'] = $status;
+    }
+
+    if (filled($q)) {
+        $activeTransactionFilters['q'] = $q;
+    }
 @endphp
 
 <div class="min-h-screen bg-slate-50 py-8">
@@ -76,19 +89,54 @@
         </section>
 
         <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+            <div class="flex flex-col gap-5 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0 flex-1">
                     <h2 class="text-lg font-bold text-slate-950">Senarai Transaksi Tabung</h2>
                     <p class="mt-1 text-sm text-slate-500">Nama penderma, jumlah, status, tarikh dan rujukan transaksi.</p>
+
+                    <form method="GET" action="{{ route('admin.tabung.index') }}" class="mt-5 flex w-full flex-col gap-2 sm:flex-row lg:max-w-3xl">
+                        @if(filled($status))
+                            <input type="hidden" name="status" value="{{ $status }}">
+                        @endif
+
+                        <label for="tabung-search" class="sr-only">Cari transaksi tabung</label>
+                        <input id="tabung-search"
+                               type="search"
+                               name="q"
+                               value="{{ $q }}"
+                               placeholder="Cari penderma, transaksi atau bill code"
+                               class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:flex-1">
+
+                        <div class="flex flex-wrap gap-2">
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-2xl bg-[#3155E7] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2647D6]">
+                                Cari
+                            </button>
+
+                            @if(filled($q))
+                                <a href="{{ route('admin.tabung.index', $statusOnlyQuery) }}"
+                                   class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                                    Reset
+                                </a>
+                            @endif
+                        </div>
+                    </form>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
-                    @foreach(['' => 'Semua', 'success' => 'Selesai', 'pending' => 'Pending', 'failed' => 'Gagal'] as $key => $label)
-                        <a href="{{ $key === '' ? route('admin.tabung.index') : route('admin.tabung.index', ['status' => $key]) }}"
-                           class="rounded-full px-4 py-2 text-sm font-semibold transition {{ (string) $status === (string) $key || ($key === '' && blank($status)) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
-                            {{ $label }}
-                        </a>
-                    @endforeach
+                <div class="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
+                    <a href="{{ route('admin.tabung.export', $activeTransactionFilters) }}"
+                       class="inline-flex items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                        Export CSV
+                    </a>
+
+                    <div class="flex flex-wrap gap-2">
+                        @foreach(['' => 'Semua', 'success' => 'Selesai', 'failed' => 'Gagal'] as $key => $label)
+                            <a href="{{ route('admin.tabung.index', $key === '' ? $statusFilterQuery : array_merge($statusFilterQuery, ['status' => $key])) }}"
+                               class="rounded-full px-4 py-2 text-sm font-semibold transition {{ (string) $status === (string) $key || ($key === '' && blank($status)) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                                {{ $label }}
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 

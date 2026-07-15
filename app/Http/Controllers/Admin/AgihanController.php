@@ -9,24 +9,80 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AgihanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $approvedStatuses = Permohonan::statusValuesFor(Permohonan::STATUS_DILULUSKAN);
+        $categoryOptions = Permohonan::KATEGORI_BANTUAN_LABELS;
+        $statusFilterOptions = [
+            Permohonan::STATUS_AGIHAN_BELUM_DIAGIH => 'Menunggu Agihan',
+            Permohonan::STATUS_AGIHAN_SEDANG_DIAGIH => 'Dalam Penghantaran',
+            Permohonan::STATUS_AGIHAN_SELESAI => 'Selesai Disalurkan',
+        ];
+        $filters = [
+            'q' => trim((string) $request->query('q', '')),
+            'category' => (string) $request->query('category', ''),
+            'status' => (string) $request->query('status', ''),
+        ];
 
-        $agihanRows = Permohonan::query()
+        if (! array_key_exists($filters['category'], $categoryOptions)) {
+            $filters['category'] = '';
+        }
+
+        if (! array_key_exists($filters['status'], $statusFilterOptions)) {
+            $filters['status'] = '';
+        }
+
+        $agihanQuery = Permohonan::query()
             ->with([
                 'pelajar:id,permohonan_id,nama_penuh,no_matrik',
                 'bantuan:id,permohonan_id,jenis_bantuan,kategori_bantuan',
                 'diagihOleh:id,name',
             ])
-            ->whereIn('status', $approvedStatuses)
+            ->whereIn('status', $approvedStatuses);
+
+        if ($filters['q'] !== '') {
+            $search = '%' . $filters['q'] . '%';
+
+            $agihanQuery->where(function ($query) use ($search) {
+                $query->where('no_kelompok', 'like', $search)
+                    ->orWhereHas('pelajar', function ($pelajarQuery) use ($search) {
+                        $pelajarQuery->where('nama_penuh', 'like', $search)
+                            ->orWhere('no_matrik', 'like', $search);
+                    });
+            });
+        }
+
+        if ($filters['category'] !== '') {
+            $categoryValues = $this->categoryFilterValues($filters['category']);
+
+            $agihanQuery->whereHas('bantuan', function ($bantuanQuery) use ($categoryValues) {
+                $bantuanQuery->whereIn('kategori_bantuan', $categoryValues);
+            });
+        }
+
+        if ($filters['status'] !== '') {
+            if ($filters['status'] === Permohonan::STATUS_AGIHAN_BELUM_DIAGIH) {
+                $agihanQuery->where(function ($query) {
+                    $query->whereNull('status_agihan')
+                        ->orWhere('status_agihan', '')
+                        ->orWhere('status_agihan', Permohonan::STATUS_AGIHAN_BELUM_DIAGIH);
+                });
+            } else {
+                $agihanQuery->where('status_agihan', $filters['status']);
+            }
+        }
+
+        $agihanRows = $agihanQuery
             ->latest('admin_review_date')
             ->latest('tarikh_mohon')
             ->latest('id')
             ->get();
+
+        $agihanRows->each(fn (Permohonan $permohonan) => $this->appendBuktiAvailability($permohonan));
 
         $distributionStats = [
             [
@@ -77,7 +133,10 @@ class AgihanController extends Controller
             'agihanRows',
             'distributionStats',
             'totalDistribution',
-            'distributionChart'
+            'distributionChart',
+            'categoryOptions',
+            'statusFilterOptions',
+            'filters'
         ));
     }
 
@@ -124,7 +183,7 @@ class AgihanController extends Controller
             'bukti_agihan' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        $buktiPath = $request->file('bukti_agihan')->store('agihan-bukti');
+        $buktiPath = $request->file('bukti_agihan')->store('agihan-bukti', 'local');
 
         if (! $buktiPath) {
             return redirect()
@@ -155,21 +214,37 @@ class AgihanController extends Controller
 
     public function bukti(Request $request, Permohonan $permohonan)
     {
-        abort_unless(filled($permohonan->bukti_agihan), 404);
-        abort_unless(Storage::disk('local')->exists($permohonan->bukti_agihan), 404);
+        $buktiFile = $this->buktiStorageFile($permohonan);
 
-        if ($request->boolean('download')) {
-            return Storage::disk('local')->download($permohonan->bukti_agihan);
+        if (! $buktiFile) {
+            return redirect()
+                ->route('admin.agihan.index')
+                ->with('warning', 'Bukti agihan tidak dijumpai dalam storan. Sila muat naik semula bukti untuk permohonan ini.');
         }
 
-        return Storage::disk('local')->response($permohonan->bukti_agihan);
+        $fileName = basename(str_replace('\\', '/', $buktiFile['path']));
+
+        if ($buktiFile['disk'] === 'absolute') {
+            if ($request->boolean('download')) {
+                return response()->download($buktiFile['path'], $fileName);
+            }
+
+            return response()->file($buktiFile['path']);
+        }
+
+        if ($request->boolean('download')) {
+            return Storage::disk($buktiFile['disk'])->download($buktiFile['path'], $fileName);
+        }
+
+        return Storage::disk($buktiFile['disk'])->response($buktiFile['path']);
     }
 
-    public function laporan()
+    public function laporan(Request $request)
     {
         $approvedStatuses = Permohonan::statusValuesFor(Permohonan::STATUS_DILULUSKAN);
         $currentYear = now()->year;
         $monthLabels = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogos', 'Sep', 'Okt', 'Nov', 'Dis'];
+        $latestAgihanSearch = trim((string) $request->query('q_agihan', ''));
 
         $agihanRows = Permohonan::query()
             ->with([
@@ -178,8 +253,8 @@ class AgihanController extends Controller
                 'diagihOleh:id,name',
             ])
             ->whereIn('status', $approvedStatuses)
-            ->latest('updated_at')
-            ->latest('id')
+            ->orderByRaw('COALESCE(tarikh_agihan, updated_at, admin_review_date, tarikh_mohon) DESC')
+            ->orderByDesc('id')
             ->get();
 
         $menungguAgihan = $agihanRows
@@ -236,13 +311,22 @@ class AgihanController extends Controller
             'dalam_proses' => $menungguAgihan + $sedangDiagih,
         ];
 
-        $latestAgihan = $agihanRows->take(10)->values();
+        $latestAgihan = $agihanRows;
+
+        if ($latestAgihanSearch !== '') {
+            $latestAgihan = $latestAgihan->filter(
+                fn (Permohonan $permohonan) => $this->matchesLatestAgihanSearch($permohonan, $latestAgihanSearch)
+            );
+        }
+
+        $latestAgihan = $latestAgihan->take(10)->values();
         $total = collect($statusData)->sum('value');
 
         return view('admin.statistik.agihan', compact(
             'statusData',
             'summary',
             'latestAgihan',
+            'latestAgihanSearch',
             'total',
             'currentYear',
             'monthLabels',
@@ -260,7 +344,8 @@ class AgihanController extends Controller
                 'diagihOleh:id,name',
             ])
             ->whereIn('status', $approvedStatuses)
-            ->latest('updated_at')
+            ->orderByRaw('COALESCE(tarikh_agihan, updated_at, admin_review_date, tarikh_mohon) DESC')
+            ->orderByDesc('id')
             ->get();
 
         return response()->streamDownload(function () use ($rows) {
@@ -287,6 +372,22 @@ class AgihanController extends Controller
     private function isApproved(Permohonan $permohonan): bool
     {
         return Permohonan::normalizeStatus($permohonan->status) === Permohonan::STATUS_DILULUSKAN;
+    }
+
+    private function matchesLatestAgihanSearch(Permohonan $permohonan, string $search): bool
+    {
+        $haystack = collect([
+            $permohonan->pelajar?->nama_penuh,
+            $permohonan->pelajar?->no_matrik,
+            $permohonan->bantuan?->kategori_bantuan,
+            Permohonan::kategoriBantuanLabel($permohonan->bantuan?->kategori_bantuan),
+            $permohonan->status_agihan_label,
+            $permohonan->diagihOleh?->name,
+        ])
+            ->filter()
+            ->implode(' ');
+
+        return str_contains(Str::lower($haystack), Str::lower($search));
     }
 
     private function sendAgihanSelesaiEmail(Permohonan $permohonan): bool
@@ -324,5 +425,108 @@ class AgihanController extends Controller
         $fallbackEmail = trim((string) ($permohonan->user?->email ?? ''));
 
         return $fallbackEmail !== '' ? $fallbackEmail : null;
+    }
+
+    private function categoryFilterValues(string $category): array
+    {
+        return collect([$category])
+            ->merge(collect(Permohonan::LEGACY_KATEGORI_BANTUAN_ALIASES)
+                ->filter(fn (string $canonical) => $canonical === $category)
+                ->keys())
+            ->merge(collect(Permohonan::LEGACY_DUMMY_KATEGORI_BANTUAN_ALIASES)
+                ->filter(fn (string $canonical) => $canonical === $category)
+                ->keys())
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function appendBuktiAvailability(Permohonan $permohonan): void
+    {
+        $buktiFile = $this->buktiStorageFile($permohonan);
+
+        $permohonan->setAttribute('bukti_agihan_exists', $buktiFile !== null);
+        $permohonan->setAttribute('bukti_agihan_disk', $buktiFile['disk'] ?? null);
+        $permohonan->setAttribute('bukti_agihan_path', $buktiFile['path'] ?? null);
+    }
+
+    private function buktiStorageFile(Permohonan $permohonan): ?array
+    {
+        $path = trim((string) $permohonan->bukti_agihan);
+
+        if ($path === '') {
+            return null;
+        }
+
+        foreach ($this->buktiStorageCandidates($path) as $candidate) {
+            if ($candidate['disk'] === 'absolute') {
+                if (is_file($candidate['path'])) {
+                    return $candidate;
+                }
+
+                continue;
+            }
+
+            if (Storage::disk($candidate['disk'])->exists($candidate['path'])) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function buktiStorageCandidates(string $path): array
+    {
+        $normalizedPath = preg_replace('#/+#', '/', str_replace('\\', '/', trim($path)));
+        $relativePath = ltrim($normalizedPath, '/');
+        $candidates = [];
+
+        $addCandidate = function (string $disk, string $candidatePath) use (&$candidates) {
+            $candidatePath = ltrim(preg_replace('#/+#', '/', str_replace('\\', '/', trim($candidatePath))), '/');
+
+            if ($candidatePath === '') {
+                return;
+            }
+
+            $key = $disk . ':' . $candidatePath;
+
+            if (! isset($candidates[$key])) {
+                $candidates[$key] = [
+                    'disk' => $disk,
+                    'path' => $candidatePath,
+                ];
+            }
+        };
+
+        $addCandidate('local', $relativePath);
+        $addCandidate('public', $relativePath);
+
+        foreach ([
+            'storage/app/private/' => 'local',
+            'storage/app/public/' => 'public',
+            'public/storage/' => 'public',
+            'private/' => 'local',
+            'public/' => 'public',
+            'storage/' => 'public',
+        ] as $prefix => $disk) {
+            $position = strpos($relativePath, $prefix);
+
+            if ($position !== false) {
+                $addCandidate($disk, substr($relativePath, $position + strlen($prefix)));
+            }
+        }
+
+        $legacyAbsolutePath = storage_path('app/' . $relativePath);
+        $storageRoot = realpath(storage_path('app'));
+        $legacyRealPath = is_file($legacyAbsolutePath) ? realpath($legacyAbsolutePath) : false;
+
+        if ($storageRoot && $legacyRealPath && str_starts_with($legacyRealPath, $storageRoot . DIRECTORY_SEPARATOR)) {
+            $candidates['absolute:' . $legacyRealPath] = [
+                'disk' => 'absolute',
+                'path' => $legacyRealPath,
+            ];
+        }
+
+        return array_values($candidates);
     }
 }

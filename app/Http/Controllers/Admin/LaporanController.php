@@ -7,6 +7,8 @@ use App\Models\CashDonation;
 use App\Models\Item;
 use App\Models\Permohonan;
 use App\Models\Sumbangan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class LaporanController extends Controller
 {
@@ -49,7 +51,7 @@ class LaporanController extends Controller
             [
                 'title' => 'Laporan Inventori',
                 'desc' => 'Status stok bantuan, item rendah dan item yang telah habis.',
-                'total_label' => number_format(Item::query()->count()),
+                'total_label' => number_format(Item::query()->aktif()->count()),
                 'meta' => 'Jumlah item',
                 'status' => 'Tersedia',
                 'href' => route('admin.statistik.inventori'),
@@ -59,9 +61,12 @@ class LaporanController extends Controller
         return view('admin.laporan.index', compact('reports'));
     }
 
-    public function inventori()
+    public function inventori(Request $request)
     {
+        $attentionItemsSearch = trim((string) $request->query('q_inventori', ''));
+
         $items = Item::query()
+            ->aktif()
             ->orderBy('kategori_bantuan')
             ->orderBy('nama_item')
             ->get();
@@ -125,17 +130,25 @@ class LaporanController extends Controller
             ->values();
 
         $attentionItems = $classifiedItems
-            ->whereIn('status_key', ['low', 'empty'])
-            ->values();
+            ->whereIn('status_key', ['low', 'empty']);
+
+        if ($attentionItemsSearch !== '') {
+            $attentionItems = $attentionItems->filter(
+                fn (array $row) => $this->matchesAttentionItemSearch($row, $attentionItemsSearch)
+            );
+        }
+
+        $attentionItems = $attentionItems->values();
 
         $total = collect($stats)->sum('value');
 
-        return view('admin.statistik.inventori', compact('stats', 'summary', 'attentionItems', 'total', 'categoryStockData'));
+        return view('admin.statistik.inventori', compact('stats', 'summary', 'attentionItems', 'attentionItemsSearch', 'total', 'categoryStockData'));
     }
 
     public function inventoriCsv()
     {
         $items = Item::query()
+            ->aktif()
             ->orderBy('kategori_bantuan')
             ->orderBy('nama_item')
             ->get();
@@ -188,5 +201,22 @@ class LaporanController extends Controller
             'label' => 'Stok Mencukupi',
             'class' => 'bg-emerald-100 text-emerald-700',
         ];
+    }
+
+    private function matchesAttentionItemSearch(array $row, string $search): bool
+    {
+        /** @var \App\Models\Item $item */
+        $item = $row['item'];
+
+        $haystack = collect([
+            $item->nama_item,
+            $item->kategori_bantuan,
+            $item->kategori_bantuan_label,
+            $row['status_label'] ?? null,
+        ])
+            ->filter()
+            ->implode(' ');
+
+        return str_contains(Str::lower($haystack), Str::lower($search));
     }
 }

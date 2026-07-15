@@ -31,11 +31,6 @@
                     'href' => Route::has('admin.agihan.index') ? route('admin.agihan.index') : '#',
                     'active' => request()->routeIs('admin.agihan.*'),
                 ],
-                [
-                    'title' => 'Status Permohonan',
-                    'href' => Route::has('admin.permohonan.status') ? route('admin.permohonan.status') : '#',
-                    'active' => request()->routeIs('admin.permohonan.status'),
-                ],
             ],
         ],
         [

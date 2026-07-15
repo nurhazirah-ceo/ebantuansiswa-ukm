@@ -173,14 +173,17 @@ class PermohonanSemakanController extends Controller
         return view('admin.permohonan.status', compact('applicationStats', 'totalApplications', 'statusRows'));
     }
 
-    public function statistik()
+    public function statistik(Request $request)
     {
+        $latestApplicationsSearch = trim((string) $request->query('q_terkini', ''));
         $statusCounts = Permohonan::statusCounts();
         $stats = $this->applicationStats($statusCounts);
         $total = collect($stats)->sum('value');
         $currentYear = now()->year;
         $approvedStatuses = Permohonan::statusValuesFor(Permohonan::STATUS_DILULUSKAN);
         $rejectedStatuses = Permohonan::statusValuesFor(Permohonan::STATUS_DITOLAK_GAGAL);
+        $categoryMatches = $this->matchingApplicationCategories($latestApplicationsSearch);
+        $statusMatches = $this->matchingApplicationStatuses($latestApplicationsSearch);
 
         $monthlyApprovedData = [];
         $monthlyRejectedData = [];
@@ -208,7 +211,25 @@ class PermohonanSemakanController extends Controller
                 'pelajar:id,permohonan_id,nama_penuh,no_matrik',
                 'bantuan:id,permohonan_id,jenis_bantuan,kategori_bantuan',
             ])
-            ->latest('created_at')
+            ->when($latestApplicationsSearch !== '', function ($query) use ($latestApplicationsSearch, $categoryMatches, $statusMatches) {
+                $query->where(function ($innerQuery) use ($latestApplicationsSearch, $categoryMatches, $statusMatches) {
+                    $innerQuery
+                        ->where('no_kelompok', 'like', '%' . $latestApplicationsSearch . '%')
+                        ->orWhere('status', 'like', '%' . $latestApplicationsSearch . '%')
+                        ->when($statusMatches !== [], fn ($query) => $query->orWhereIn('status', $statusMatches))
+                        ->orWhereHas('pelajar', function ($pelajarQuery) use ($latestApplicationsSearch) {
+                            $pelajarQuery->where('nama_penuh', 'like', '%' . $latestApplicationsSearch . '%')
+                                ->orWhere('no_matrik', 'like', '%' . $latestApplicationsSearch . '%');
+                        })
+                        ->orWhereHas('bantuan', function ($bantuanQuery) use ($latestApplicationsSearch, $categoryMatches) {
+                            $bantuanQuery->where(function ($categoryQuery) use ($latestApplicationsSearch, $categoryMatches) {
+                                $categoryQuery->where('kategori_bantuan', 'like', '%' . $latestApplicationsSearch . '%')
+                                    ->when($categoryMatches !== [], fn ($query) => $query->orWhereIn('kategori_bantuan', $categoryMatches));
+                            });
+                        });
+                });
+            })
+            ->latest('tarikh_mohon')
             ->latest('id')
             ->take(8)
             ->get();
@@ -221,7 +242,8 @@ class PermohonanSemakanController extends Controller
             'monthlyApprovedData',
             'monthlyRejectedData',
             'currentYear',
-            'latestApplications'
+            'latestApplications',
+            'latestApplicationsSearch'
         ));
     }
 
@@ -284,6 +306,64 @@ class PermohonanSemakanController extends Controller
                 'class' => 'bg-indigo-50 text-indigo-700',
             ],
         ];
+    }
+
+    private function matchingApplicationCategories(string $search): array
+    {
+        if ($search === '') {
+            return [];
+        }
+
+        $normalizedSearch = Str::of($search)
+            ->replace(['_', '-'], ' ')
+            ->lower()
+            ->squish()
+            ->toString();
+
+        return collect(Permohonan::KATEGORI_BANTUAN_LABELS)
+            ->filter(function (string $label, string $key) use ($normalizedSearch) {
+                $normalizedLabel = Str::of($label)->lower()->squish()->toString();
+                $normalizedKey = Str::of($key)->replace(['_', '-'], ' ')->lower()->squish()->toString();
+
+                return Str::contains($normalizedLabel, $normalizedSearch)
+                    || Str::contains($normalizedKey, $normalizedSearch);
+            })
+            ->keys()
+            ->all();
+    }
+
+    private function matchingApplicationStatuses(string $search): array
+    {
+        if ($search === '') {
+            return [];
+        }
+
+        $normalizedSearch = Str::of($search)
+            ->replace(['_', '-', '/'], ' ')
+            ->lower()
+            ->squish()
+            ->toString();
+
+        return collect([
+            'Dalam Semakan' => Permohonan::statusValuesFor(Permohonan::STATUS_DALAM_SEMAKAN),
+            'Diluluskan' => Permohonan::statusValuesFor(Permohonan::STATUS_DILULUSKAN),
+            'Ditolak Gagal' => Permohonan::statusValuesFor(Permohonan::STATUS_DITOLAK_GAGAL),
+        ])
+            ->filter(function (array $values, string $label) use ($normalizedSearch) {
+                $normalizedLabel = Str::of($label)->lower()->squish()->toString();
+
+                return Str::contains($normalizedLabel, $normalizedSearch)
+                    || collect($values)->contains(function (string $value) use ($normalizedSearch) {
+                        return Str::of($value)
+                            ->replace(['_', '-', '/'], ' ')
+                            ->lower()
+                            ->squish()
+                            ->contains($normalizedSearch);
+                    });
+            })
+            ->flatten()
+            ->values()
+            ->all();
     }
 
     private function studentEmailFor(Permohonan $permohonan): ?string

@@ -52,15 +52,61 @@
             </div>
         </section>
 
-        @foreach($categories as $category)
-            <section class="space-y-4" id="{{ $category['key'] }}">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-950">{{ $category['title'] }}</h2>
-                    <p class="mt-1 text-sm text-slate-500">{{ $category['description'] }}</p>
-                </div>
+        <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" aria-label="Kategori stok sumbangan">
+            @foreach($categories as $category)
+                @php
+                    $categoryItems = collect($category['items']);
+                    $previewItems = $categoryItems->take(3);
+                    $categoryNeed = $categoryItems->sum('jumlah_diperlukan');
+                    $categoryBalance = $categoryItems->sum('baki');
+                @endphp
 
+                <button type="button"
+                        data-category-tab
+                        data-category-target="{{ $category['key'] }}"
+                        aria-selected="{{ $loop->first ? 'true' : 'false' }}"
+                        class="category-tab rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Kategori</p>
+                            <h2 class="mt-2 text-xl font-bold text-slate-950">{{ $category['title'] }}</h2>
+                            <p class="mt-2 line-clamp-2 text-sm text-slate-500">{{ $category['description'] }}</p>
+                        </div>
+
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                            {{ $categoryItems->count() }} item
+                        </span>
+                    </div>
+
+                    <div class="mt-5 flex items-center justify-between gap-4">
+                        <div class="flex -space-x-3">
+                            @forelse($previewItems as $previewItem)
+                                <span class="grid h-14 w-14 place-items-center rounded-2xl border-2 border-white bg-slate-50 shadow-sm">
+                                    <img src="{{ asset('image/' . $previewItem->image_asset_path) }}"
+                                         alt="{{ $previewItem->nama_item }}"
+                                         class="max-h-11 max-w-11 object-contain">
+                                </span>
+                            @empty
+                                <span class="grid h-14 w-14 place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-400">
+                                    Tiada
+                                </span>
+                            @endforelse
+                        </div>
+
+                        <div class="text-right">
+                            <p class="text-xs font-semibold text-slate-500">Diperlukan</p>
+                            <p class="text-lg font-extrabold text-slate-950">{{ $categoryNeed }}</p>
+                            <p class="mt-1 text-xs font-semibold text-rose-600">Baki {{ $categoryBalance }}</p>
+                        </div>
+                    </div>
+                </button>
+            @endforeach
+        </section>
+
+        @foreach($categories as $category)
+            <section @class(['hidden' => ! $loop->first]) id="{{ $category['key'] }}" data-category-panel="{{ $category['key'] }}">
                 <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    @forelse($category['items'] as $item)
+                    @foreach($category['items'] as $item)
                         @php
                             $balance = $item->baki;
                             $percent = $item->progress_percentage;
@@ -203,97 +249,11 @@
                                 </button>
                             </form>
                         </div>
-                    @empty
-                        <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
-                            <p class="text-sm font-semibold text-slate-700">Tiada item aktif untuk kategori ini.</p>
-                            <p class="mt-2 text-sm text-slate-500">Item sumbangan aktif akan dipaparkan di ruangan ini.</p>
-                        </div>
-                    @endforelse
+                    @endforeach
                 </div>
             </section>
         @endforeach
 
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-950">Senarai Sumbangan</h2>
-                    <p class="mt-1 text-sm text-slate-500">Rekod transaksi sumbangan penderma terkini.</p>
-                </div>
-                <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
-                    {{ $recentSumbangans->count() }} rekod
-                </span>
-            </div>
-
-            <div class="overflow-hidden rounded-2xl border border-slate-200">
-                <div class="hidden lg:grid lg:grid-cols-[1.1fr_1.2fr_1fr_0.8fr_0.9fr_0.9fr] bg-slate-100 text-sm font-semibold text-slate-700">
-                    <div class="px-5 py-4 border-r border-slate-200">No. Sumbangan</div>
-                    <div class="px-5 py-4 border-r border-slate-200">Penderma</div>
-                    <div class="px-5 py-4 border-r border-slate-200">Kategori</div>
-                    <div class="px-5 py-4 border-r border-slate-200">Jumlah</div>
-                    <div class="px-5 py-4 border-r border-slate-200">Status</div>
-                    <div class="px-5 py-4">Kaedah</div>
-                </div>
-
-                <div class="divide-y divide-slate-200">
-                    @forelse($recentSumbangans as $record)
-                        @php
-                            $statusClass = match ($record->status) {
-                                \App\Models\Sumbangan::STATUS_SELESAI => 'bg-emerald-100 text-emerald-700',
-                                \App\Models\Sumbangan::STATUS_MENUNGGU_BAYARAN => 'bg-amber-100 text-amber-700',
-                                'dibatalkan', 'ditolak' => 'bg-rose-100 text-rose-700',
-                                default => 'bg-slate-100 text-slate-700',
-                            };
-                            $statusLabel = match ($record->status) {
-                                \App\Models\Sumbangan::STATUS_SELESAI => 'Selesai',
-                                \App\Models\Sumbangan::STATUS_MENUNGGU_BAYARAN => 'Menunggu Bayaran',
-                                \App\Models\Sumbangan::STATUS_DALAM_SEMAKAN => 'Dalam Semakan',
-                                'dibatalkan' => 'Dibatalkan',
-                                'ditolak' => 'Ditolak',
-                                default => filled($record->status) ? \Illuminate\Support\Str::of($record->status)->replace(['_', '-'], ' ')->squish()->title() : 'Belum Lengkap',
-                            };
-                            $categoriesText = $record->items
-                                ->pluck('kategori_bantuan')
-                                ->filter()
-                                ->unique()
-                                ->map(fn ($category) => \App\Models\Permohonan::kategoriBantuanLabel($category))
-                                ->implode(', ');
-                            $rawMethod = (string) ($record->kaedah_sumbangan ?? '');
-                            $normalizedMethod = strtolower(trim($rawMethod));
-                            $methodLabel = in_array($normalizedMethod, ['simulasi', 'simulasi pembayaran', 'pembayaran atas talian'], true)
-                                || data_get($record->payment_payload, 'method') === 'simulasi'
-                                    ? 'Pembayaran Atas Talian'
-                                    : ($rawMethod ?: '-');
-                        @endphp
-
-                        <div class="grid gap-3 px-5 py-5 text-sm lg:grid-cols-[1.1fr_1.2fr_1fr_0.8fr_0.9fr_0.9fr] lg:items-center lg:gap-0 lg:px-0">
-                            <div class="lg:px-5">
-                                <p class="font-semibold text-blue-700 break-all">{{ $record->no_sumbangan ?: ('SMB-' . str_pad($record->id, 6, '0', STR_PAD_LEFT)) }}</p>
-                                <p class="mt-1 text-xs text-slate-500">{{ optional($record->created_at)->format('d/m/Y') }}</p>
-                            </div>
-                            <div class="lg:px-5">
-                                <p class="font-semibold text-slate-900">{{ $record->user?->name ?? 'Penderma' }}</p>
-                                <p class="mt-1 text-xs text-slate-500">{{ $record->user?->email ?? '-' }}</p>
-                            </div>
-                            <div class="text-slate-600 lg:px-5">{{ $categoriesText ?: '-' }}</div>
-                            <div class="font-semibold text-slate-900 lg:px-5">RM{{ number_format((float) $record->jumlah_keseluruhan, 2) }}</div>
-                            <div class="lg:px-5">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">
-                                    {{ $statusLabel }}
-                                </span>
-                            </div>
-                            <div class="text-slate-600 lg:px-5">{{ $methodLabel }}</div>
-                        </div>
-                    @empty
-                        <div class="px-5 py-12 text-center">
-                            <div class="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8">
-                                <p class="text-sm font-semibold text-slate-700">Tiada rekod transaksi sumbangan lagi.</p>
-                                <p class="mt-2 text-sm text-slate-500">Transaksi penderma terkini akan dipaparkan selepas sumbangan direkodkan.</p>
-                            </div>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-        </section>
     </div>
 </div>
 
@@ -479,6 +439,35 @@
             card.requestSubmit();
         });
     });
+
+    const categoryTabs = document.querySelectorAll('[data-category-tab]');
+    const categoryPanels = document.querySelectorAll('[data-category-panel]');
+
+    function activateCategory(categoryKey) {
+        categoryTabs.forEach((tab) => {
+            const isActive = tab.dataset.categoryTarget === categoryKey;
+
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            tab.classList.toggle('border-slate-300', isActive);
+            tab.classList.toggle('bg-slate-50', isActive);
+            tab.classList.toggle('shadow-lg', isActive);
+            tab.classList.toggle('border-slate-200', !isActive);
+        });
+
+        categoryPanels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.categoryPanel !== categoryKey);
+        });
+    }
+
+    categoryTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            activateCategory(tab.dataset.categoryTarget);
+        });
+    });
+
+    if (categoryTabs.length > 0) {
+        activateCategory(categoryTabs[0].dataset.categoryTarget);
+    }
 
     (() => {
         const modal = document.querySelector('[data-add-item-modal]');

@@ -359,7 +359,7 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('/permohonan', [PermohonanSemakanController::class, 'index'])
             ->name('permohonan.index');
 
-        Route::get('/permohonan/status', [PermohonanSemakanController::class, 'status'])
+        Route::get('/permohonan/status', fn () => redirect()->route('admin.permohonan.index'))
             ->name('permohonan.status');
 
         Route::get('/permohonan/{permohonan}', [PermohonanSemakanController::class, 'show'])
@@ -397,6 +397,9 @@ Route::middleware(['auth', 'role:admin'])
 
         Route::get('/tabung', [AdminCashDonationController::class, 'index'])
             ->name('tabung.index');
+
+        Route::get('/tabung/export', [AdminCashDonationController::class, 'export'])
+            ->name('tabung.export');
 
         Route::patch('/tabung/target', [AdminCashDonationController::class, 'updateTarget'])
             ->name('tabung.target.update');

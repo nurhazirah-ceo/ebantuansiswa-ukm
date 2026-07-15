@@ -154,9 +154,10 @@ class SumbanganController extends Controller
         return "donations/{$folder}/{$filename}";
     }
 
-    public function statistik()
+    public function statistik(Request $request)
     {
         $currentYear = now()->year;
+        $latestTransactionsSearch = trim((string) $request->query('q_sumbangan', ''));
 
         $completedSumbangans = Sumbangan::query()
             ->completed()
@@ -246,9 +247,17 @@ class SumbanganController extends Controller
 
         $latestTransactions = $allCompletedSumbangans
             ->map(function (Sumbangan $sumbangan) {
+                $fallbackReference = 'SMB-' . str_pad($sumbangan->id, 6, '0', STR_PAD_LEFT);
+
                 return [
                     'type' => 'Sumbangan Barang',
-                    'reference' => $sumbangan->no_sumbangan ?: ('SMB-' . str_pad($sumbangan->id, 6, '0', STR_PAD_LEFT)),
+                    'reference' => $sumbangan->no_sumbangan ?: $fallbackReference,
+                    'search_reference' => collect([
+                        $sumbangan->no_sumbangan,
+                        $sumbangan->payment_reference,
+                        $sumbangan->toyyibpay_bill_code,
+                        $fallbackReference,
+                    ])->filter()->implode(' '),
                     'donor' => $sumbangan->user?->name ?? 'Penderma',
                     'email' => $sumbangan->user?->email ?? '-',
                     'amount' => (float) $sumbangan->jumlah_keseluruhan,
@@ -258,9 +267,16 @@ class SumbanganController extends Controller
                 ];
             })
             ->concat($allSuccessfulCashDonations->map(function (CashDonation $cashDonation) {
+                $fallbackReference = sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
+
                 return [
                     'type' => 'Sumbangan Tabung',
-                    'reference' => $cashDonation->bill_code ?: sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id),
+                    'reference' => $cashDonation->bill_code ?: $fallbackReference,
+                    'search_reference' => collect([
+                        $cashDonation->transaction_id,
+                        $cashDonation->bill_code,
+                        $fallbackReference,
+                    ])->filter()->implode(' '),
                     'donor' => $cashDonation->user?->name ?? 'Penderma',
                     'email' => $cashDonation->user?->email ?? '-',
                     'amount' => (float) $cashDonation->amount,
@@ -268,7 +284,15 @@ class SumbanganController extends Controller
                     'status' => 'Selesai',
                     'date' => $cashDonation->paid_at ?? $cashDonation->created_at,
                 ];
-            }))
+            }));
+
+        if ($latestTransactionsSearch !== '') {
+            $latestTransactions = $latestTransactions->filter(
+                fn (array $record) => $this->matchesLatestTransactionSearch($record, $latestTransactionsSearch)
+            );
+        }
+
+        $latestTransactions = $latestTransactions
             ->sortByDesc(fn (array $record) => optional($record['date'])->timestamp ?? 0)
             ->take(10)
             ->values();
@@ -284,7 +308,8 @@ class SumbanganController extends Controller
             'transactionCount',
             'simulationTotal',
             'simulationDonations',
-            'latestTransactions'
+            'latestTransactions',
+            'latestTransactionsSearch'
         ));
     }
 
@@ -297,14 +322,17 @@ class SumbanganController extends Controller
             ->latest('created_at')
             ->get()
             ->map(fn (Sumbangan $sumbangan) => [
-                $sumbangan->no_sumbangan ?: ('SMB-' . str_pad($sumbangan->id, 6, '0', STR_PAD_LEFT)),
-                'Sumbangan Barang',
-                $sumbangan->user?->name ?? 'Penderma',
-                $sumbangan->user?->email ?? '-',
-                number_format((float) $sumbangan->jumlah_keseluruhan, 2, '.', ''),
-                $this->paymentMethodLabel($sumbangan->kaedah_sumbangan, $sumbangan->payment_payload),
-                'Selesai',
-                optional($sumbangan->paid_at ?? $sumbangan->created_at)->format('Y-m-d H:i:s'),
+                'date' => $sumbangan->paid_at ?? $sumbangan->created_at,
+                'row' => [
+                    $sumbangan->no_sumbangan ?: ('SMB-' . str_pad($sumbangan->id, 6, '0', STR_PAD_LEFT)),
+                    'Sumbangan Barang',
+                    $sumbangan->user?->name ?? 'Penderma',
+                    $sumbangan->user?->email ?? '-',
+                    number_format((float) $sumbangan->jumlah_keseluruhan, 2, '.', ''),
+                    $this->paymentMethodLabel($sumbangan->kaedah_sumbangan, $sumbangan->payment_payload),
+                    'Selesai',
+                    optional($sumbangan->paid_at ?? $sumbangan->created_at)->format('Y-m-d H:i:s'),
+                ],
             ]);
 
         $cashRows = CashDonation::query()
@@ -314,17 +342,24 @@ class SumbanganController extends Controller
             ->latest('created_at')
             ->get()
             ->map(fn (CashDonation $cashDonation) => [
-                $cashDonation->bill_code ?: sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id),
-                'Sumbangan Tabung',
-                $cashDonation->user?->name ?? 'Penderma',
-                $cashDonation->user?->email ?? '-',
-                number_format((float) $cashDonation->amount, 2, '.', ''),
-                $this->cashDonationMethodLabel($cashDonation),
-                'Selesai',
-                optional($cashDonation->paid_at ?? $cashDonation->created_at)->format('Y-m-d H:i:s'),
+                'date' => $cashDonation->paid_at ?? $cashDonation->created_at,
+                'row' => [
+                    $cashDonation->bill_code ?: sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id),
+                    'Sumbangan Tabung',
+                    $cashDonation->user?->name ?? 'Penderma',
+                    $cashDonation->user?->email ?? '-',
+                    number_format((float) $cashDonation->amount, 2, '.', ''),
+                    $this->cashDonationMethodLabel($cashDonation),
+                    'Selesai',
+                    optional($cashDonation->paid_at ?? $cashDonation->created_at)->format('Y-m-d H:i:s'),
+                ],
             ]);
 
-        $rows = $itemRows->concat($cashRows);
+        $rows = $itemRows
+            ->concat($cashRows)
+            ->sortByDesc(fn (array $record) => optional($record['date'])->timestamp ?? 0)
+            ->map(fn (array $record) => $record['row'])
+            ->values();
 
         return response()->streamDownload(function () use ($rows) {
             $handle = fopen('php://output', 'w');
@@ -361,5 +396,21 @@ class SumbanganController extends Controller
         }
 
         return $cashDonation->bill_code ? 'ToyyibPay' : 'Pembayaran Atas Talian';
+    }
+
+    private function matchesLatestTransactionSearch(array $record, string $search): bool
+    {
+        $haystack = collect([
+            $record['donor'] ?? null,
+            $record['reference'] ?? null,
+            $record['search_reference'] ?? null,
+            $record['type'] ?? null,
+            $record['method'] ?? null,
+            $record['status'] ?? null,
+        ])
+            ->filter()
+            ->implode(' ');
+
+        return str_contains(Str::lower($haystack), Str::lower($search));
     }
 }
