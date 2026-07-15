@@ -144,9 +144,9 @@
                 </div>
             </div>
 
-            <form method="GET" action="{{ route('admin.agihan.index') }}" class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
-                <div class="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_minmax(12rem,0.55fr)_minmax(12rem,0.55fr)_auto] lg:items-center">
-                    <div>
+            <form method="GET" action="{{ route('admin.agihan.index') }}" class="border-b border-slate-200 bg-slate-50/70 px-6 py-3">
+                <div class="flex flex-col gap-3 md:flex-row md:flex-wrap lg:flex-nowrap lg:items-center">
+                    <div class="min-w-0 md:flex-[1_1_22rem] lg:flex-[1_1_30rem]">
                         <label for="agihanSearch" class="sr-only">
                             Cari
                         </label>
@@ -158,7 +158,7 @@
                                class="h-11 w-full rounded-xl border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
                     </div>
 
-                    <div>
+                    <div class="min-w-0 md:flex-[1_1_13rem] lg:flex-[0_0_14rem]">
                         <label for="agihanCategory" class="sr-only">
                             Kategori
                         </label>
@@ -174,7 +174,7 @@
                         </select>
                     </div>
 
-                    <div>
+                    <div class="min-w-0 md:flex-[1_1_13rem] lg:flex-[0_0_14rem]">
                         <label for="agihanStatus" class="sr-only">
                             Status
                         </label>
@@ -190,15 +190,15 @@
                         </select>
                     </div>
 
-                    <div class="flex gap-2 lg:justify-end">
+                    <div class="flex flex-col gap-2 sm:flex-row md:flex-[0_0_auto] lg:ml-auto lg:justify-end">
                         <button type="submit"
-                                class="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-[#071633] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#102544] lg:flex-none">
+                                class="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#071633] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#102544] sm:w-auto">
                             Tapis
                         </button>
 
                         @if($hasActiveFilters)
                             <a href="{{ route('admin.agihan.index') }}"
-                               class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 lg:flex-none">
+                               class="inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 sm:w-auto">
                                 Reset
                             </a>
                         @endif
