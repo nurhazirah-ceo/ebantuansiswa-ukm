@@ -48,6 +48,9 @@ test('admin can create individual donor with Malaysian mobile phone number', fun
     $user = User::query()->where('email', 'ahmad@example.com')->firstOrFail();
     $donor = Donor::query()->where('user_id', $user->id)->firstOrFail();
 
+    expect($donor->homepage_order)->toBeNull()
+        ->and($donor->show_on_homepage)->toBeFalse();
+
     $this->assertDatabaseHas('donors', [
         'user_id' => $user->id,
         'donor_type' => 'individu',
@@ -642,7 +645,7 @@ test('homepage donors are limited to four and ordered by ranking', function () {
         'donor_type' => 'syarikat',
         'phone' => '0123456789',
         'preferred_contact' => 'email',
-        'homepage_order' => 0,
+        'homepage_order' => null,
         'show_on_homepage' => false,
     ]);
 
@@ -690,6 +693,191 @@ test('homepage ranking is required when donor is shown on homepage', function ()
     $this->assertDatabaseMissing('users', [
         'email' => 'ahmad-ranking@example.com',
     ]);
+});
+
+test('homepage ranking must be unique when creating a visible donor', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+    $existingUser = User::factory()->create([
+        'role' => 'penderma',
+        'email' => 'existing-ranking@example.com',
+    ]);
+
+    Donor::create([
+        'user_id' => $existingUser->id,
+        'donor_type' => 'syarikat',
+        'phone' => '0123456789',
+        'preferred_contact' => 'email',
+        'homepage_order' => 1,
+        'show_on_homepage' => true,
+    ]);
+
+    $response = $this
+        ->actingAs($admin)
+        ->from(route('admin.penderma.create'))
+        ->post(route('admin.penderma.store'), [
+            'donor_type' => 'individu',
+            'name' => 'Penderma Duplikasi',
+            'email' => 'duplicate-ranking@example.com',
+            'phone' => '0123456789',
+            'preferred_contact' => 'phone',
+            'address_line_1' => 'Bangunan Komuniti UKM',
+            'city' => 'Bangi',
+            'postcode' => '43600',
+            'state' => 'Selangor',
+            'country' => 'Malaysia',
+            'show_on_homepage' => '1',
+            'homepage_order' => 1,
+        ]);
+
+    $response
+        ->assertRedirect(route('admin.penderma.create'))
+        ->assertSessionHasErrors([
+            'homepage_order' => 'Ranking ini telah digunakan oleh penderma lain. Sila pilih ranking yang lain.',
+        ]);
+
+    $this->assertDatabaseMissing('users', [
+        'email' => 'duplicate-ranking@example.com',
+    ]);
+});
+
+test('homepage ranking update ignores current donor but rejects another donor ranking', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+    $firstUser = User::factory()->create([
+        'role' => 'penderma',
+        'name' => 'Penderma Pertama',
+        'email' => 'first-ranking@example.com',
+    ]);
+    $secondUser = User::factory()->create([
+        'role' => 'penderma',
+        'name' => 'Penderma Kedua',
+        'email' => 'second-ranking@example.com',
+    ]);
+    $firstDonor = Donor::create([
+        'user_id' => $firstUser->id,
+        'donor_type' => 'syarikat',
+        'phone' => '0123456789',
+        'preferred_contact' => 'email',
+        'homepage_order' => 1,
+        'show_on_homepage' => true,
+    ]);
+    $secondDonor = Donor::create([
+        'user_id' => $secondUser->id,
+        'donor_type' => 'syarikat',
+        'phone' => '0123456789',
+        'preferred_contact' => 'email',
+        'homepage_order' => 2,
+        'show_on_homepage' => true,
+    ]);
+
+    foreach ([$firstDonor, $secondDonor] as $donor) {
+        $donor->address()->create([
+            'address_line_1' => 'Bangunan Komuniti UKM',
+            'city' => 'Bangi',
+            'postcode' => '43600',
+            'state' => 'Selangor',
+            'country' => 'Malaysia',
+        ]);
+    }
+
+    $this
+        ->actingAs($admin)
+        ->from(route('admin.penderma.index'))
+        ->put(route('admin.penderma.update', $firstUser), [
+            'name' => 'Penderma Pertama',
+            'email' => 'first-ranking@example.com',
+            'phone' => '0123456789',
+            'preferred_contact' => 'email',
+            'address_line_1' => 'Bangunan Komuniti UKM',
+            'city' => 'Bangi',
+            'postcode' => '43600',
+            'state' => 'Selangor',
+            'country' => 'Malaysia',
+            'show_on_homepage' => '1',
+            'homepage_order' => 1,
+        ])
+        ->assertRedirect(route('admin.penderma.index'))
+        ->assertSessionHasNoErrors();
+
+    $this
+        ->actingAs($admin)
+        ->from(route('admin.penderma.index'))
+        ->put(route('admin.penderma.update', $secondUser), [
+            'name' => 'Penderma Kedua',
+            'email' => 'second-ranking@example.com',
+            'phone' => '0123456789',
+            'preferred_contact' => 'email',
+            'address_line_1' => 'Bangunan Komuniti UKM',
+            'city' => 'Bangi',
+            'postcode' => '43600',
+            'state' => 'Selangor',
+            'country' => 'Malaysia',
+            'show_on_homepage' => '1',
+            'homepage_order' => 1,
+        ])
+        ->assertRedirect(route('admin.penderma.index'))
+        ->assertSessionHasErrors([
+            'homepage_order' => 'Ranking ini telah digunakan oleh penderma lain. Sila pilih ranking yang lain.',
+        ]);
+
+    expect($firstDonor->fresh()->homepage_order)->toBe(1)
+        ->and($secondDonor->fresh()->homepage_order)->toBe(2);
+});
+
+test('homepage ranking is cleared when donor is hidden from homepage', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+    $donorUser = User::factory()->create([
+        'role' => 'penderma',
+        'name' => 'Penderma Homepage',
+        'email' => 'homepage-hidden@example.com',
+    ]);
+    $donor = Donor::create([
+        'user_id' => $donorUser->id,
+        'donor_type' => 'syarikat',
+        'phone' => '0123456789',
+        'preferred_contact' => 'email',
+        'homepage_order' => 4,
+        'show_on_homepage' => true,
+    ]);
+    $donor->address()->create([
+        'address_line_1' => 'Bangunan Komuniti UKM',
+        'city' => 'Bangi',
+        'postcode' => '43600',
+        'state' => 'Selangor',
+        'country' => 'Malaysia',
+    ]);
+
+    $this
+        ->actingAs($admin)
+        ->from(route('admin.penderma.index'))
+        ->put(route('admin.penderma.update', $donorUser), [
+            'name' => 'Penderma Homepage',
+            'email' => 'homepage-hidden@example.com',
+            'phone' => '0123456789',
+            'preferred_contact' => 'email',
+            'address_line_1' => 'Bangunan Komuniti UKM',
+            'city' => 'Bangi',
+            'postcode' => '43600',
+            'state' => 'Selangor',
+            'country' => 'Malaysia',
+            'show_on_homepage' => '0',
+            'homepage_order' => 4,
+        ])
+        ->assertRedirect(route('admin.penderma.index'))
+        ->assertSessionHasNoErrors();
+
+    $donor->refresh();
+
+    expect($donor->homepage_order)->toBeNull()
+        ->and($donor->show_on_homepage)->toBeFalse();
 });
 
 test('support document must be pdf jpg jpeg or png', function () {

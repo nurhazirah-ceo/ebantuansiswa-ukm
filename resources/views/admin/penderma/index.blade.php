@@ -19,6 +19,8 @@
     $oldCountry = old('country', optional($oldEditingAddress)->country ?: 'Malaysia');
     $oldSelectedCountry = in_array($oldCountry, $countryOptions, true) ? $oldCountry : 'Lain-lain';
     $oldCountryOther = old('country_other', $oldSelectedCountry === 'Lain-lain' ? $oldCountry : '');
+    $oldHomepage = old('show_on_homepage', optional($oldEditingDonor)->show_on_homepage ? '1' : '0');
+    $oldShowOnHomepage = in_array(strtolower((string) $oldHomepage), ['1', 'true', 'on'], true);
 
     $oldEditPayload = $oldEditingUserId ? [
         'id' => $oldEditingUserId,
@@ -35,8 +37,8 @@
         'state' => old('state', optional($oldEditingAddress)->state),
         'country' => $oldSelectedCountry,
         'countryOther' => $oldCountryOther,
-        'homepage' => old('show_on_homepage', optional($oldEditingDonor)->show_on_homepage ? '1' : '0'),
-        'ranking' => old('homepage_order', optional($oldEditingDonor)->homepage_order),
+        'homepage' => $oldHomepage,
+        'ranking' => $oldShowOnHomepage ? old('homepage_order', optional($oldEditingDonor)->homepage_order) : '',
         'status' => old('account_status', optional($oldEditingUser)->account_status),
         'adminNote' => old('admin_note', optional($oldEditingDonor)->admin_note),
         'logoUrl' => $storageUrl(optional($oldEditingDonor)->logo),
@@ -144,7 +146,7 @@
                             'country' => $selectedCountry,
                             'countryOther' => $countryOther,
                             'homepage' => optional($donor)->show_on_homepage ? '1' : '0',
-                            'ranking' => optional($donor)->homepage_order ?: '',
+                            'ranking' => optional($donor)->show_on_homepage ? optional($donor)->homepage_order : '',
                             'status' => $accountStatus,
                             'adminNote' => optional($donor)->admin_note,
                             'logoUrl' => $logoUrl,
@@ -765,6 +767,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function syncHomepageRanking(clearWhenDisabled = true) {
+        if (!fields.showOnHomepage || !fields.ranking) {
+            return;
+        }
+
+        const enabled = fields.showOnHomepage.checked;
+        fields.ranking.disabled = !enabled;
+        fields.ranking.required = enabled;
+
+        if (!enabled && clearWhenDisabled) {
+            fields.ranking.value = '';
+        }
+    }
+
     function safeUrl(url) {
         const value = String(url || '').trim();
 
@@ -870,6 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fields.showOnHomepage) {
             fields.showOnHomepage.checked = ['1', 'true', 'on'].includes(String(valueOf(data, 'homepage')).toLowerCase());
         }
+        syncHomepageRanking();
         setFieldValue(fields.adminNote, valueOf(data, 'adminNote'));
         setFieldValue(fields.logo, '');
         setFieldValue(fields.supportDocument, '');
@@ -901,6 +918,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (fields.country) {
         fields.country.addEventListener('change', syncCountryOther);
+    }
+
+    if (fields.showOnHomepage) {
+        fields.showOnHomepage.addEventListener('change', () => syncHomepageRanking());
     }
 
     editButtons.forEach(button => {

@@ -64,12 +64,7 @@ class DonorController extends Controller
 
             'logo'              => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'support_document'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'homepage_order'    => [
-                Rule::requiredIf(fn () => $request->boolean('show_on_homepage')),
-                'nullable',
-                'integer',
-                'min:1',
-            ],
+            'homepage_order'    => $this->homepageOrderRules($request),
             'show_on_homepage'  => 'nullable|boolean',
         ];
 
@@ -115,6 +110,7 @@ class DonorController extends Controller
             'state.required' => 'Sila pilih negeri.',
             'state.in' => 'Sila pilih negeri.',
             'country_other.required' => 'Sila nyatakan negara.',
+            'homepage_order.unique' => 'Ranking ini telah digunakan oleh penderma lain. Sila pilih ranking yang lain.',
         ];
 
         $attributes = [
@@ -143,6 +139,9 @@ class DonorController extends Controller
         ];
 
         $request->validate($rules, $messages, $attributes);
+
+        $showOnHomepage = $request->boolean('show_on_homepage');
+        $homepageOrder = $this->homepageOrderValue($request);
 
         if ($request->donor_type === 'individu') {
             $name = $request->name;
@@ -208,8 +207,8 @@ class DonorController extends Controller
 
                 'logo'              => $logoPath,
                 'support_document'  => $supportDocumentPath,
-                'homepage_order'    => (int) ($request->input('homepage_order') ?: 0),
-                'show_on_homepage'  => $request->boolean('show_on_homepage'),
+                'homepage_order'    => $homepageOrder,
+                'show_on_homepage'  => $showOnHomepage,
             ]);
 
             $donor->address()->create([
@@ -308,12 +307,7 @@ class DonorController extends Controller
             ],
 
             'logo'              => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'homepage_order'    => [
-                Rule::requiredIf(fn () => $request->boolean('show_on_homepage')),
-                'nullable',
-                'integer',
-                'min:1',
-            ],
+            'homepage_order'    => $this->homepageOrderRules($request, $donor),
             'show_on_homepage'  => 'nullable|boolean',
             'support_document'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
@@ -339,6 +333,7 @@ class DonorController extends Controller
             'state.required' => 'Sila pilih negeri.',
             'state.in' => 'Sila pilih negeri.',
             'country_other.required' => 'Sila nyatakan negara.',
+            'homepage_order.unique' => 'Ranking ini telah digunakan oleh penderma lain. Sila pilih ranking yang lain.',
         ], [
             'name' => 'Nama',
             'email' => 'Emel',
@@ -361,6 +356,8 @@ class DonorController extends Controller
         ]);
 
         $country = $this->resolvedCountry($request, $donor->address?->country ?? 'Malaysia');
+        $showOnHomepage = $request->boolean('show_on_homepage');
+        $homepageOrder = $this->homepageOrderValue($request);
         $newLogoPath = null;
         $newSupportDocumentPath = null;
 
@@ -399,8 +396,8 @@ class DonorController extends Controller
 
                 'logo'              => $logoPath,
                 'support_document'  => $supportDocumentPath,
-                'homepage_order'    => (int) ($request->input('homepage_order') ?: 0),
-                'show_on_homepage'  => $request->boolean('show_on_homepage'),
+                'homepage_order'    => $homepageOrder,
+                'show_on_homepage'  => $showOnHomepage,
             ]);
 
             if ($donor->address) {
@@ -598,5 +595,38 @@ class DonorController extends Controller
         $country = trim((string) $request->input('country'));
 
         return $country !== '' ? $country : $fallback;
+    }
+
+    private function homepageOrderRules(Request $request, ?Donor $donor = null): array
+    {
+        $showOnHomepage = $request->boolean('show_on_homepage');
+
+        $rules = [
+            Rule::requiredIf($showOnHomepage),
+            'nullable',
+            'integer',
+            'min:1',
+        ];
+
+        if ($showOnHomepage) {
+            $uniqueRule = Rule::unique('donors', 'homepage_order');
+
+            if ($donor) {
+                $uniqueRule->ignore($donor->id);
+            }
+
+            $rules[] = $uniqueRule;
+        }
+
+        return $rules;
+    }
+
+    private function homepageOrderValue(Request $request): ?int
+    {
+        if (! $request->boolean('show_on_homepage')) {
+            return null;
+        }
+
+        return (int) $request->input('homepage_order');
     }
 }

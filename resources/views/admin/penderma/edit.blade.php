@@ -13,7 +13,10 @@
     $savedCountry = old('country', optional($address)->country ?: 'Malaysia');
     $selectedCountry = in_array($savedCountry, $countryOptions, true) ? $savedCountry : 'Lain-lain';
     $countryOtherValue = old('country_other', $selectedCountry === 'Lain-lain' ? $savedCountry : '');
-    $showOnHomepage = $errors->any() ? old('show_on_homepage') : $donor->show_on_homepage;
+    $showOnHomepage = $errors->any()
+        ? in_array(strtolower((string) old('show_on_homepage')), ['1', 'true', 'on'], true)
+        : (bool) $donor->show_on_homepage;
+    $homepageOrder = $showOnHomepage ? old('homepage_order', $donor->homepage_order) : '';
     $states = \App\Http\Controllers\Admin\DonorController::stateOptions();
 @endphp
 
@@ -378,9 +381,12 @@
                             </label>
 
                             <input type="number"
+                                   id="homepageOrder"
                                    name="homepage_order"
-                                   value="{{ old('homepage_order', $donor->homepage_order ?: 1) }}"
+                                   value="{{ $homepageOrder }}"
                                    min="1"
+                                   @disabled(! $showOnHomepage)
+                                   @required($showOnHomepage)
                                    class="form-input">
 
                             <p class="text-xs text-gray-500 mt-2">
@@ -394,9 +400,10 @@
 
                         <div class="md:col-span-2 flex items-center gap-3 bg-gray-50 border rounded-lg px-4 py-3">
                             <input type="checkbox"
+                                   id="showOnHomepage"
                                    name="show_on_homepage"
                                    value="1"
-                                   @checked((bool) $showOnHomepage)
+                                   @checked($showOnHomepage)
                                    class="w-5 h-5 rounded border-gray-300 text-blue-600">
 
                             <div>
@@ -512,6 +519,26 @@ function syncCountryOther() {
 
 document.querySelector('[data-country-select]')?.addEventListener('change', syncCountryOther);
 syncCountryOther();
+
+const showOnHomepage = document.getElementById('showOnHomepage');
+const homepageOrder = document.getElementById('homepageOrder');
+
+function syncHomepageOrder(clearWhenDisabled = true) {
+    if (!showOnHomepage || !homepageOrder) {
+        return;
+    }
+
+    const enabled = showOnHomepage.checked;
+    homepageOrder.disabled = !enabled;
+    homepageOrder.required = enabled;
+
+    if (!enabled && clearWhenDisabled) {
+        homepageOrder.value = '';
+    }
+}
+
+showOnHomepage?.addEventListener('change', () => syncHomepageOrder());
+syncHomepageOrder(false);
 
 const validationErrorFields = new Set(@json(array_keys($errors->getMessages())));
 

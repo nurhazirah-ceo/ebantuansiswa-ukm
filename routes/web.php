@@ -37,6 +37,7 @@ Route::get('/', function () {
     $homepageDonors = Donor::with('user')
         ->where('show_on_homepage', 1)
         ->orderBy('homepage_order', 'asc')
+        ->orderBy('id', 'asc')
         ->limit(4)
         ->get();
 

@@ -8,6 +8,8 @@
 @php
     $countryOptions = ['Malaysia', 'Singapore', 'Indonesia', 'Thailand', 'Brunei', 'Lain-lain'];
     $selectedCountry = old('country', 'Malaysia');
+    $showOnHomepage = in_array(strtolower((string) old('show_on_homepage')), ['1', 'true', 'on'], true);
+    $homepageOrder = $showOnHomepage ? old('homepage_order') : '';
 @endphp
 
 <div class="min-h-screen bg-gray-100 py-8">
@@ -355,11 +357,14 @@
                             </label>
 
                             <input type="number"
+                                   id="homepageOrder"
                                    name="homepage_order"
-                                   value="{{ old('homepage_order') }}"
+                                   value="{{ $homepageOrder }}"
                                    min="1"
                                    inputmode="numeric"
                                    placeholder="Contoh: 1"
+                                   @disabled(! $showOnHomepage)
+                                   @required($showOnHomepage)
                                    class="w-full border rounded-md px-3 py-2 text-sm">
 
                             <p class="text-xs text-gray-500 mt-1">
@@ -373,9 +378,10 @@
 
                         <div class="md:col-span-2 flex items-center gap-3 bg-gray-50 border rounded-lg px-4 py-3">
                             <input type="checkbox"
+                                   id="showOnHomepage"
                                    name="show_on_homepage"
                                    value="1"
-                                   @checked(old('show_on_homepage'))
+                                   @checked($showOnHomepage)
                                    class="w-5 h-5 rounded border-gray-300">
 
                             <div>
@@ -432,6 +438,8 @@ const submitBtn = document.getElementById('submitBtn');
 const logoInput = document.getElementById('logoInput');
 const logoPreviewWrap = document.getElementById('logoPreviewWrap');
 const logoPreview = document.getElementById('logoPreview');
+const showOnHomepage = document.getElementById('showOnHomepage');
+const homepageOrder = document.getElementById('homepageOrder');
 
 /* ================= FORM MAP ================= */
 const forms = {
@@ -471,7 +479,23 @@ donorType.addEventListener('change', () => {
 });
 
 /* ================= VALIDATION ================= */
+function syncHomepageOrder(clearWhenDisabled = true) {
+    if (!showOnHomepage || !homepageOrder) {
+        return;
+    }
+
+    const enabled = showOnHomepage.checked;
+    homepageOrder.disabled = !enabled;
+    homepageOrder.required = enabled;
+
+    if (!enabled && clearWhenDisabled) {
+        homepageOrder.value = '';
+    }
+}
+
 function validateForm() {
+    syncHomepageOrder(false);
+
     if (emailErrorActive) {
         disableSubmit();
         return;
@@ -492,11 +516,13 @@ function validateForm() {
     const formInputs = activeForm.querySelectorAll('.input-required');
     const addressInputs = document.querySelectorAll('#section-address .input-required');
     const contactChecked = document.querySelector('input[name="preferred_contact"]:checked');
+    const homepageRankingValid = !showOnHomepage?.checked || homepageOrder?.value.trim() !== '';
 
     const allFilled =
         [...formInputs].filter(i => !i.disabled).every(i => i.value.trim() !== '') &&
         [...addressInputs].filter(i => !i.disabled).every(i => i.value.trim() !== '') &&
-        contactChecked;
+        contactChecked &&
+        homepageRankingValid;
 
     submitBtn.disabled = !allFilled;
     submitBtn.classList.toggle('opacity-50', !allFilled);
@@ -510,6 +536,11 @@ function disableSubmit() {
 
 document.addEventListener('input', validateForm);
 document.addEventListener('change', validateForm);
+showOnHomepage?.addEventListener('change', () => {
+    syncHomepageOrder();
+    validateForm();
+});
+syncHomepageOrder(false);
 
 document.querySelectorAll('[data-phone-input]').forEach(input => {
     input.addEventListener('input', () => {
