@@ -127,9 +127,44 @@ class AgihanController extends Controller
             'data' => $chartStats->pluck('value')->values()->all(),
             'colors' => $chartStats->pluck('color')->values()->all(),
         ];
+        $agihanRowsByStatus = collect([
+            Permohonan::STATUS_AGIHAN_BELUM_DIAGIH => $agihanRows
+                ->where('status_agihan_key', Permohonan::STATUS_AGIHAN_BELUM_DIAGIH)
+                ->values(),
+            Permohonan::STATUS_AGIHAN_SEDANG_DIAGIH => $agihanRows
+                ->where('status_agihan_key', Permohonan::STATUS_AGIHAN_SEDANG_DIAGIH)
+                ->values(),
+            Permohonan::STATUS_AGIHAN_SELESAI => $agihanRows
+                ->where('status_agihan_key', Permohonan::STATUS_AGIHAN_SELESAI)
+                ->values(),
+        ]);
+        $agihanSections = collect([
+            [
+                'key' => Permohonan::STATUS_AGIHAN_BELUM_DIAGIH,
+                'label' => 'Menunggu Agihan',
+            ],
+            [
+                'key' => Permohonan::STATUS_AGIHAN_SEDANG_DIAGIH,
+                'label' => 'Sedang Diagih',
+            ],
+            [
+                'key' => Permohonan::STATUS_AGIHAN_SELESAI,
+                'label' => 'Selesai',
+            ],
+        ])->map(function (array $section) use ($agihanRowsByStatus): array {
+            $section['count'] = $agihanRowsByStatus->get($section['key'], collect())->count();
+
+            return $section;
+        })->values();
+        $activeAgihanSection = $filters['status'] !== ''
+            ? $filters['status']
+            : Permohonan::STATUS_AGIHAN_BELUM_DIAGIH;
 
         return view('admin.agihan.index', compact(
             'agihanRows',
+            'agihanRowsByStatus',
+            'agihanSections',
+            'activeAgihanSection',
             'distributionStats',
             'totalDistribution',
             'distributionChart',

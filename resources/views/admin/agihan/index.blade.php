@@ -19,6 +19,17 @@
         $statusSelesai => 'Selesai Disalurkan',
     ];
     $hasActiveFilters = collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty();
+    $agihanRowsByStatus = $agihanRowsByStatus ?? collect([
+        $statusBelum => $agihanRows->where('status_agihan_key', $statusBelum)->values(),
+        $statusSedang => $agihanRows->where('status_agihan_key', $statusSedang)->values(),
+        $statusSelesai => $agihanRows->where('status_agihan_key', $statusSelesai)->values(),
+    ]);
+    $agihanSections = $agihanSections ?? collect([
+        ['key' => $statusBelum, 'label' => 'Menunggu Agihan', 'count' => $agihanRowsByStatus->get($statusBelum, collect())->count()],
+        ['key' => $statusSedang, 'label' => 'Sedang Diagih', 'count' => $agihanRowsByStatus->get($statusSedang, collect())->count()],
+        ['key' => $statusSelesai, 'label' => 'Selesai', 'count' => $agihanRowsByStatus->get($statusSelesai, collect())->count()],
+    ]);
+    $activeAgihanSection = $activeAgihanSection ?? ($filters['status'] ?: $statusBelum);
 
     $workflowLabels = [
         $statusBelum => [
@@ -195,8 +206,37 @@
                 </div>
             </form>
 
-            <div class="divide-y divide-slate-200">
-                @forelse($agihanRows as $row)
+            <div class="border-b border-slate-200 bg-white px-6 py-4">
+                <div class="flex flex-wrap gap-3" id="agihan-section-tabs" role="tablist" aria-label="Status agihan bantuan">
+                    @foreach($agihanSections as $section)
+                        @php
+                            $isActiveSection = $section['key'] === $activeAgihanSection;
+                        @endphp
+                        <button type="button"
+                                class="agihan-section-tab inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition {{ $isActiveSection ? 'border-[#071633] bg-[#071633] text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}"
+                                data-agihan-tab="{{ $section['key'] }}"
+                                aria-selected="{{ $isActiveSection ? 'true' : 'false' }}"
+                                role="tab">
+                            <span>{{ $section['label'] }}</span>
+                            <span class="agihan-section-count rounded-full px-2 py-0.5 text-xs font-bold {{ $isActiveSection ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-600' }}">
+                                {{ $section['count'] }}
+                            </span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            <div>
+                @foreach($agihanSections as $section)
+                    @php
+                        $sectionRows = $agihanRowsByStatus->get($section['key'], collect());
+                        $isActiveSection = $section['key'] === $activeAgihanSection;
+                    @endphp
+                    <section class="agihan-section-panel {{ $isActiveSection ? '' : 'hidden' }}"
+                             data-agihan-panel="{{ $section['key'] }}"
+                             role="tabpanel">
+                        <div class="divide-y divide-slate-200">
+                @forelse($sectionRows as $row)
                     @php
                         $jenisBantuan = $row->bantuan?->jenis_bantuan ?? $row->jenis_bantuan;
                         $kategoriBantuan = $row->bantuan?->kategori_bantuan;
@@ -415,6 +455,9 @@
                         </div>
                     </div>
                 @endforelse
+                        </div>
+                    </section>
+                @endforeach
             </div>
         </section>
 
@@ -423,6 +466,40 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const sectionTabs = document.querySelectorAll('.agihan-section-tab');
+        const sectionPanels = document.querySelectorAll('.agihan-section-panel');
+
+        sectionTabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                const target = tab.dataset.agihanTab;
+
+                sectionTabs.forEach(function (currentTab) {
+                    const isActive = currentTab.dataset.agihanTab === target;
+                    const count = currentTab.querySelector('.agihan-section-count');
+
+                    currentTab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    currentTab.classList.toggle('border-[#071633]', isActive);
+                    currentTab.classList.toggle('bg-[#071633]', isActive);
+                    currentTab.classList.toggle('text-white', isActive);
+                    currentTab.classList.toggle('border-slate-200', ! isActive);
+                    currentTab.classList.toggle('bg-white', ! isActive);
+                    currentTab.classList.toggle('text-slate-700', ! isActive);
+                    currentTab.classList.toggle('hover:bg-slate-50', ! isActive);
+
+                    if (count) {
+                        count.classList.toggle('bg-white/15', isActive);
+                        count.classList.toggle('text-white', isActive);
+                        count.classList.toggle('bg-slate-100', ! isActive);
+                        count.classList.toggle('text-slate-600', ! isActive);
+                    }
+                });
+
+                sectionPanels.forEach(function (panel) {
+                    panel.classList.toggle('hidden', panel.dataset.agihanPanel !== target);
+                });
+            });
+        });
+
         document.querySelectorAll('[data-proof-preview]').forEach(function (button) {
             button.addEventListener('click', function () {
                 const proofUrl = button.dataset.proofUrl;
