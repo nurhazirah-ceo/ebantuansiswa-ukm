@@ -11,6 +11,49 @@
                 ? ucwords(str_replace(['_', '-'], ' ', (string) $value))
                 : '-';
 
+            $formatTempohPermohonan = function ($item, string $tabKey): string {
+                if ($tabKey === 'selesai') {
+                    return 'Selesai';
+                }
+
+                if (! $item->tarikh_mohon) {
+                    return '-';
+                }
+
+                $submittedAt = \Carbon\Carbon::parse($item->tarikh_mohon)->startOfDay();
+                $statusKey = $item->status_key;
+
+                if ($statusKey === \App\Models\Permohonan::STATUS_DALAM_SEMAKAN) {
+                    $daysSinceSubmission = max(0, (int) $submittedAt->diffInDays(now()->startOfDay(), false));
+
+                    if ($daysSinceSubmission > 7) {
+                        $overdueDays = $daysSinceSubmission - 7;
+
+                        return $daysSinceSubmission . ' hari (' . $overdueDays . ' hari lewat)';
+                    }
+
+                    return $daysSinceSubmission . ' hari';
+                }
+
+                if (in_array($statusKey, [
+                    \App\Models\Permohonan::STATUS_DILULUSKAN,
+                    \App\Models\Permohonan::STATUS_DITOLAK_GAGAL,
+                ], true)) {
+                    if (! $item->admin_review_date) {
+                        return '-';
+                    }
+
+                    $reviewedAt = \Carbon\Carbon::parse($item->admin_review_date)->startOfDay();
+                    $reviewDuration = max(0, (int) $submittedAt->diffInDays($reviewedAt, false));
+
+                    return $reviewDuration . ' hari';
+                }
+
+                $daysSinceSubmission = max(0, (int) $submittedAt->diffInDays(now()->startOfDay(), false));
+
+                return $daysSinceSubmission . ' hari';
+            };
+
             $tabConfig = [
                 'jumlah' => [
                     'label' => 'Jumlah',
@@ -137,10 +180,7 @@
                             <tbody class="divide-y divide-slate-200 bg-white">
                                 @forelse($tab['items'] as $item)
                                     @php
-                                        $hariPermohonan = $item->tarikh_mohon
-                                            ? \Carbon\Carbon::parse($item->tarikh_mohon)->startOfDay()->diffInDays(now()->startOfDay())
-                                            : null;
-
+                                        $tempohPermohonan = $formatTempohPermohonan($item, $tabKey);
                                         $noMatrik = $item->pelajar?->no_matrik ?? $item->user?->matrik ?? '-';
                                         $jenisBantuan = $item->bantuan?->jenis_bantuan ?? $item->jenis_bantuan;
                                         $kategoriBantuan = $item->bantuan?->kategori_bantuan ?? $item->kategori ?? $item->pakej;
@@ -173,7 +213,7 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-5 text-sm text-slate-700">
-                                            <div>{{ $hariPermohonan !== null ? $hariPermohonan . ' hari' : '-' }}</div>
+                                            <div>{{ $tempohPermohonan }}</div>
                                         </td>
                                         <td class="px-6 py-5 text-center">
                                             <a href="{{ route('admin.permohonan.show', $item) }}"

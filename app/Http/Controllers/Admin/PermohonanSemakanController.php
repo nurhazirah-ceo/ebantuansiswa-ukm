@@ -44,7 +44,7 @@ class PermohonanSemakanController extends Controller
                         });
                 });
             })
-            ->latest('tarikh_mohon')
+            ->latest('created_at')
             ->latest('id')
             ->get();
 

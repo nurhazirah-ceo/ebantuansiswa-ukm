@@ -77,9 +77,8 @@ class AgihanController extends Controller
         }
 
         $agihanRows = $agihanQuery
-            ->latest('admin_review_date')
-            ->latest('tarikh_mohon')
-            ->latest('id')
+            ->orderByRaw('COALESCE(tarikh_agihan, updated_at, admin_review_date, tarikh_mohon) DESC')
+            ->orderByDesc('id')
             ->get();
 
         $agihanRows->each(fn (Permohonan $permohonan) => $this->appendBuktiAvailability($permohonan));

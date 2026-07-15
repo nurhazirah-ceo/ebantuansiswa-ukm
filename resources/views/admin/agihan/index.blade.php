@@ -133,10 +133,10 @@
                 </div>
             </div>
 
-            <form method="GET" action="{{ route('admin.agihan.index') }}" class="border-b border-slate-200 bg-slate-50/70 px-6 py-5">
-                <div class="grid gap-4 lg:grid-cols-[1.3fr_0.9fr_0.9fr_auto] lg:items-end">
+            <form method="GET" action="{{ route('admin.agihan.index') }}" class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+                <div class="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_minmax(12rem,0.55fr)_minmax(12rem,0.55fr)_auto] lg:items-center">
                     <div>
-                        <label for="agihanSearch" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <label for="agihanSearch" class="sr-only">
                             Cari
                         </label>
                         <input id="agihanSearch"
@@ -144,16 +144,16 @@
                                name="q"
                                value="{{ $filters['q'] }}"
                                placeholder="Nama pelajar, no matrik atau no permohonan"
-                               class="mt-2 w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
+                               class="h-11 w-full rounded-xl border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
                     </div>
 
                     <div>
-                        <label for="agihanCategory" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <label for="agihanCategory" class="sr-only">
                             Kategori
                         </label>
                         <select id="agihanCategory"
                                 name="category"
-                                class="mt-2 w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
+                                class="h-11 w-full rounded-xl border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
                             <option value="">Semua kategori</option>
                             @foreach($categoryOptions as $value => $label)
                                 <option value="{{ $value }}" @selected($filters['category'] === $value)>
@@ -164,12 +164,12 @@
                     </div>
 
                     <div>
-                        <label for="agihanStatus" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <label for="agihanStatus" class="sr-only">
                             Status
                         </label>
                         <select id="agihanStatus"
                                 name="status"
-                                class="mt-2 w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
+                                class="h-11 w-full rounded-xl border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm focus:border-[#071633] focus:ring-[#071633]">
                             <option value="">Semua status</option>
                             @foreach($statusFilterOptions as $value => $label)
                                 <option value="{{ $value }}" @selected($filters['status'] === $value)>
@@ -179,15 +179,15 @@
                         </select>
                     </div>
 
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 lg:justify-end">
                         <button type="submit"
-                                class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-[#071633] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#102544] lg:flex-none">
+                                class="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-[#071633] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#102544] lg:flex-none">
                             Tapis
                         </button>
 
                         @if($hasActiveFilters)
                             <a href="{{ route('admin.agihan.index') }}"
-                               class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 lg:flex-none">
+                               class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 lg:flex-none">
                                 Reset
                             </a>
                         @endif
