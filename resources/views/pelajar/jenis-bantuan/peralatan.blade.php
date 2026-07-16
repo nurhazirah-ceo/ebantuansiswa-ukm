@@ -3,6 +3,38 @@
 @section('content')
 @php
     $items = $items ?? collect();
+    $equipmentItemDetails = [
+        'Laptop' => [
+            'Jenama: Dell Latitude 3440',
+            'Pemproses Intel® Core™ i5 Generasi Ke-13',
+            'Memori 8GB RAM',
+            'Storan 512GB SSD',
+            'Skrin 14 inci Full HD',
+            'Sesuai untuk tugasan, pembelajaran dan kelas dalam talian',
+        ],
+        'Tablet' => [
+            'Jenama: Samsung Galaxy Tab S9 FE',
+            'Disertakan bersama S Pen',
+            'Skrin 10.9 inci',
+            'Storan dalaman 128GB',
+            'Bateri berkapasiti tinggi untuk penggunaan harian',
+            'Sesuai untuk nota digital, pembelajaran dan pembentangan',
+        ],
+        'Kalkulator Saintifik' => [
+            'Jenama: Casio fx-570ES PLUS',
+            'Kalkulator saintifik bukan boleh atur cara',
+            'Paparan Natural Display',
+            'Lebih 400 fungsi matematik',
+            'Sesuai untuk kursus Sains, Teknologi dan Kejuruteraan',
+            'Diluluskan untuk kegunaan akademik',
+        ],
+    ];
+
+    $items = $items->map(function ($item) use ($equipmentItemDetails) {
+        $item->detail_points = $equipmentItemDetails[$item->nama_item] ?? [];
+
+        return $item;
+    });
 @endphp
 
 <div class="max-w-7xl mx-auto px-6 py-10">
@@ -28,6 +60,12 @@
                    <h2 class="text-lg font-semibold text-gray-800 mb-2 min-h-[56px] leading-tight">
                         {{ $item->nama_item }}
                     </h2>
+
+                    <ul class="text-sm text-gray-700 list-disc pl-5 mb-5 space-y-1">
+                        @foreach($item->detail_points as $detailPoint)
+                            <li>{{ $detailPoint }}</li>
+                        @endforeach
+                    </ul>
                 </div>
 
                 <a
