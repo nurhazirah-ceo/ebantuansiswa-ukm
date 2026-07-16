@@ -556,7 +556,10 @@ class DummyDataSeeder extends Seeder
 
         foreach ($successfulByMonth as $month => $amounts) {
             foreach ($amounts as $offset => $amount) {
-                $date = Carbon::create(2026, $month, 6 + ($offset * 11), 10 + $offset, 20, 0);
+                $date = $this->correctedSuccessfulCashDonationDate(
+                    $sequence,
+                    Carbon::create(2026, $month, 6 + ($offset * 11), 10 + $offset, 20, 0)
+                );
                 $donor = $donors[($sequence + $month) % count($donors)]['user'];
 
                 CashDonation::query()->create([
@@ -592,15 +595,19 @@ class DummyDataSeeder extends Seeder
         ];
 
         foreach ($failedDonations as $failedIndex => [$month, $day, $amount]) {
-            $date = Carbon::create(2026, $month, $day, 16, 5, 0);
+            $failedSequence = $failedIndex + 1;
+            $date = $this->correctedFailedCashDonationDate(
+                $failedSequence,
+                Carbon::create(2026, $month, $day, 16, 5, 0)
+            );
             $donor = $donors[($failedIndex * 2) % count($donors)]['user'];
 
             CashDonation::query()->create([
                 'user_id' => $donor->id,
                 'amount' => $amount,
                 'message' => 'Transaksi dummy gagal untuk paparan status pembayaran.',
-                'bill_code' => sprintf('DUMMY-TAB-FAILED-%02d', $failedIndex + 1),
-                'transaction_id' => sprintf('TPD-FAILED-2026-%03d', $failedIndex + 1),
+                'bill_code' => sprintf('DUMMY-TAB-FAILED-%02d', $failedSequence),
+                'transaction_id' => sprintf('TPD-FAILED-2026-%03d', $failedSequence),
                 'payment_status' => CashDonation::STATUS_FAILED,
                 'paid_at' => null,
                 'resolved_at' => $date->copy()->addMinutes(20),
@@ -614,6 +621,39 @@ class DummyDataSeeder extends Seeder
                 'updated_at' => $date->copy()->addMinutes(20),
             ]);
         }
+    }
+
+    private function correctedSuccessfulCashDonationDate(int $sequence, Carbon $date): Carbon
+    {
+        $correctedDates = [
+            15 => [2026, 1, 24, 10, 20, 0],
+            16 => [2026, 1, 29, 11, 20, 0],
+            17 => [2026, 2, 24, 10, 20, 0],
+            18 => [2026, 2, 27, 11, 20, 0],
+            19 => [2026, 3, 24, 10, 20, 0],
+            20 => [2026, 4, 24, 11, 20, 0],
+            21 => [2026, 5, 24, 10, 20, 0],
+            22 => [2026, 6, 24, 11, 20, 0],
+            23 => [2026, 7, 4, 10, 20, 0],
+            24 => [2026, 7, 12, 11, 20, 0],
+        ];
+
+        return isset($correctedDates[$sequence])
+            ? Carbon::create(...$correctedDates[$sequence])
+            : $date;
+    }
+
+    private function correctedFailedCashDonationDate(int $sequence, Carbon $date): Carbon
+    {
+        $correctedDates = [
+            4 => [2026, 4, 28, 16, 5, 0],
+            5 => [2026, 6, 28, 16, 5, 0],
+            6 => [2026, 7, 14, 16, 5, 0],
+        ];
+
+        return isset($correctedDates[$sequence])
+            ? Carbon::create(...$correctedDates[$sequence])
+            : $date;
     }
 
     /**
