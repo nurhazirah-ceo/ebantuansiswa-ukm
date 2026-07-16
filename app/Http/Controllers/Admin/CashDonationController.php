@@ -16,7 +16,7 @@ class CashDonationController extends Controller
         $q = trim((string) $request->query('q', ''));
 
         $cashDonations = $this->filteredCashDonationsQuery($request)
-            ->orderByRaw('COALESCE(paid_at, created_at) DESC')
+            ->orderByRaw('COALESCE(resolved_at, paid_at, created_at) DESC')
             ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString();
@@ -45,7 +45,7 @@ class CashDonationController extends Controller
     public function export(Request $request)
     {
         $cashDonations = $this->filteredCashDonationsQuery($request)
-            ->orderByRaw('COALESCE(paid_at, created_at) DESC')
+            ->orderByRaw('COALESCE(resolved_at, paid_at, created_at) DESC')
             ->orderByDesc('id')
             ->get();
 
@@ -70,7 +70,7 @@ class CashDonationController extends Controller
                     $donation->user?->name ?? 'Penderma',
                     number_format((float) $donation->amount, 2, '.', ''),
                     $this->cashDonationStatusLabel($donation->payment_status),
-                    optional($donation->paid_at ?? $donation->created_at)->format('Y-m-d H:i:s') ?: '-',
+                    optional($donation->resolved_at ?? $donation->paid_at ?? $donation->created_at)->format('Y-m-d H:i:s') ?: '-',
                     $references === [] ? '-' : implode(' / ', $references),
                 ]);
             }

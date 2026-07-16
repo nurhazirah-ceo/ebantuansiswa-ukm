@@ -567,6 +567,7 @@ class DummyDataSeeder extends Seeder
                     'transaction_id' => sprintf('TPD-2026-%06d', $sequence),
                     'payment_status' => CashDonation::STATUS_SUCCESS,
                     'paid_at' => $date,
+                    'resolved_at' => $date,
                     'raw_response' => [
                         'dummy' => true,
                         'environment' => 'test',
@@ -602,6 +603,7 @@ class DummyDataSeeder extends Seeder
                 'transaction_id' => sprintf('TPD-FAILED-2026-%03d', $failedIndex + 1),
                 'payment_status' => CashDonation::STATUS_FAILED,
                 'paid_at' => null,
+                'resolved_at' => $date->copy()->addMinutes(20),
                 'raw_response' => [
                     'dummy' => true,
                     'environment' => 'test',

@@ -294,6 +294,7 @@ class CashDonationController extends Controller
                     'bill_code' => $paymentData['bill_code'] ?: $locked->bill_code,
                     'raw_response' => $paymentData['raw'],
                     'paid_at' => $locked->paid_at ?: now(),
+                    'resolved_at' => $locked->resolved_at ?: now(),
                 ]);
 
                 return;
@@ -309,6 +310,7 @@ class CashDonationController extends Controller
                     'transaction_id' => $paymentData['reference'] ?: $locked->transaction_id,
                     'bill_code' => $paymentData['bill_code'] ?: $locked->bill_code,
                     'raw_response' => $paymentData['raw'],
+                    'resolved_at' => $locked->resolved_at ?: now(),
                 ]);
 
                 return;

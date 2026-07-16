@@ -20,6 +20,7 @@ class CashDonation extends Model
         'transaction_id',
         'payment_status',
         'paid_at',
+        'resolved_at',
         'raw_response',
     ];
 
@@ -27,6 +28,7 @@ class CashDonation extends Model
         'amount' => 'decimal:2',
         'raw_response' => 'array',
         'paid_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

@@ -171,7 +171,7 @@
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-slate-700">
-                                    {{ optional($donation->paid_at ?? $donation->created_at)->format('d/m/Y h:i A') }}
+                                    {{ optional($donation->resolved_at ?? $donation->paid_at ?? $donation->created_at)->format('d/m/Y h:i A') }}
                                 </td>
                                 <td class="px-5 py-4 text-slate-700">
                                     <p class="break-all font-semibold">{{ $donation->transaction_id ?: '-' }}</p>
