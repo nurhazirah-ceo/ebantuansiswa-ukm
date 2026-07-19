@@ -642,7 +642,8 @@ class DashboardController extends Controller
 
     private function cashDonationReference(CashDonation $cashDonation): string
     {
-        return sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
+        return $cashDonation->reference_no
+            ?: sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
     }
 
     private function cashDonationStatusLabel(?string $status): string

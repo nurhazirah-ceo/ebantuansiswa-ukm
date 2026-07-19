@@ -562,7 +562,7 @@ class DummyDataSeeder extends Seeder
                 );
                 $donor = $donors[($sequence + $month) % count($donors)]['user'];
 
-                CashDonation::query()->create([
+                $cashDonation = CashDonation::query()->create([
                     'user_id' => $donor->id,
                     'amount' => $amount,
                     'message' => 'Sumbangan dummy Tabung Bantuan Pelajar UKM.',
@@ -580,6 +580,8 @@ class DummyDataSeeder extends Seeder
                     'created_at' => $date->copy()->subMinutes(12),
                     'updated_at' => $date,
                 ]);
+
+                $this->backfillCashDonationReferenceNo($cashDonation);
 
                 $sequence++;
             }
@@ -602,7 +604,7 @@ class DummyDataSeeder extends Seeder
             );
             $donor = $donors[($failedIndex * 2) % count($donors)]['user'];
 
-            CashDonation::query()->create([
+            $cashDonation = CashDonation::query()->create([
                 'user_id' => $donor->id,
                 'amount' => $amount,
                 'message' => 'Transaksi dummy gagal untuk paparan status pembayaran.',
@@ -620,7 +622,23 @@ class DummyDataSeeder extends Seeder
                 'created_at' => $date,
                 'updated_at' => $date->copy()->addMinutes(20),
             ]);
+
+            $this->backfillCashDonationReferenceNo($cashDonation);
         }
+    }
+
+    private function backfillCashDonationReferenceNo(CashDonation $cashDonation): void
+    {
+        DB::table('cash_donations')
+            ->where('id', $cashDonation->id)
+            ->whereNull('reference_no')
+            ->update([
+                'reference_no' => sprintf(
+                    'TAB/%s/%06d',
+                    ($cashDonation->created_at ?? now())->format('Ymd'),
+                    $cashDonation->id
+                ),
+            ]);
     }
 
     private function correctedSuccessfulCashDonationDate(int $sequence, Carbon $date): Carbon

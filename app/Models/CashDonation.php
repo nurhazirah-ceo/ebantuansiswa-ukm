@@ -16,6 +16,7 @@ class CashDonation extends Model
         'user_id',
         'amount',
         'message',
+        'reference_no',
         'bill_code',
         'transaction_id',
         'payment_status',

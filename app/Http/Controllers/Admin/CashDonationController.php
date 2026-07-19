@@ -57,11 +57,12 @@ class CashDonationController extends Controller
                 'Jumlah',
                 'Status',
                 'Tarikh',
-                'Transaksi / Bill Code',
+                'Rujukan / Transaksi / Bill Code',
             ]);
 
             foreach ($cashDonations as $donation) {
                 $references = array_filter([
+                    $donation->reference_no,
                     $donation->transaction_id,
                     $donation->bill_code,
                 ], fn ($value) => filled($value));
@@ -110,6 +111,7 @@ class CashDonationController extends Controller
                 $query->where(function (Builder $query) use ($q) {
                     $query
                         ->whereHas('user', fn (Builder $query) => $query->where('name', 'like', "%{$q}%"))
+                        ->orWhere('reference_no', 'like', "%{$q}%")
                         ->orWhere('transaction_id', 'like', "%{$q}%")
                         ->orWhere('bill_code', 'like', "%{$q}%");
                 });

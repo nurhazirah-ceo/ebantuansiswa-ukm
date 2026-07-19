@@ -51,7 +51,7 @@ class CashDonationController extends Controller
 
         $reference = $this->cashDonationReference($cashDonation);
         $cashDonation->update([
-            'transaction_id' => $reference,
+            'reference_no' => $reference,
             'raw_response' => [
                 'category' => 'tabung',
                 'payment_method' => 'toyyibpay',
@@ -341,7 +341,19 @@ class CashDonationController extends Controller
             }
         }
 
-        $cashDonationId = $this->cashDonationIdFromReference((string) ($paymentData['order_id'] ?? ''));
+        $orderId = (string) ($paymentData['order_id'] ?? '');
+
+        if (filled($orderId)) {
+            $cashDonation = CashDonation::query()
+                ->where('reference_no', $orderId)
+                ->first();
+
+            if ($cashDonation) {
+                return $cashDonation;
+            }
+        }
+
+        $cashDonationId = $this->cashDonationIdFromReference($orderId);
 
         return $cashDonationId ? CashDonation::query()->find($cashDonationId) : null;
     }
@@ -451,7 +463,8 @@ class CashDonationController extends Controller
 
     private function cashDonationReference(CashDonation $cashDonation): string
     {
-        return sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
+        return $cashDonation->reference_no
+            ?: sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
     }
 
     private function authorizeCashDonation(CashDonation $cashDonation): void

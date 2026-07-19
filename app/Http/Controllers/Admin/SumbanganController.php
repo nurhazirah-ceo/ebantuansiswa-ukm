@@ -267,12 +267,13 @@ class SumbanganController extends Controller
                 ];
             })
             ->concat($allSuccessfulCashDonations->map(function (CashDonation $cashDonation) {
-                $fallbackReference = sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
+                $fallbackReference = $this->cashDonationFallbackReference($cashDonation);
 
                 return [
                     'type' => 'Sumbangan Tabung',
-                    'reference' => $cashDonation->bill_code ?: $fallbackReference,
+                    'reference' => $this->cashDonationReportReference($cashDonation),
                     'search_reference' => collect([
+                        $cashDonation->reference_no,
                         $cashDonation->transaction_id,
                         $cashDonation->bill_code,
                         $fallbackReference,
@@ -344,7 +345,7 @@ class SumbanganController extends Controller
             ->map(fn (CashDonation $cashDonation) => [
                 'date' => $cashDonation->paid_at ?? $cashDonation->created_at,
                 'row' => [
-                    $cashDonation->bill_code ?: sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id),
+                    $this->cashDonationReportReference($cashDonation),
                     'Sumbangan Tabung',
                     $cashDonation->user?->name ?? 'Penderma',
                     $cashDonation->user?->email ?? '-',
@@ -396,6 +397,22 @@ class SumbanganController extends Controller
         }
 
         return $cashDonation->bill_code ? 'ToyyibPay' : 'Pembayaran Atas Talian';
+    }
+
+    private function cashDonationReportReference(CashDonation $cashDonation): string
+    {
+        $referenceNo = trim((string) $cashDonation->reference_no);
+
+        if ($referenceNo !== '') {
+            return $referenceNo;
+        }
+
+        return $this->cashDonationFallbackReference($cashDonation);
+    }
+
+    private function cashDonationFallbackReference(CashDonation $cashDonation): string
+    {
+        return sprintf('TAB/%s/%06d', ($cashDonation->created_at ?? now())->format('Ymd'), $cashDonation->id);
     }
 
     private function matchesLatestTransactionSearch(array $record, string $search): bool

@@ -49,7 +49,8 @@ test('creating a cash donation creates a pending ToyyibPay bill and redirects to
         ->and($cashDonation->payment_status)->toBe(CashDonation::STATUS_PENDING)
         ->and($cashDonation->paid_at)->toBeNull()
         ->and($cashDonation->resolved_at)->toBeNull()
-        ->and($cashDonation->transaction_id)->toBe(sprintf('TAB/%s/%06d', $cashDonation->created_at->format('Ymd'), $cashDonation->id))
+        ->and($cashDonation->reference_no)->toBe(sprintf('TAB/%s/%06d', $cashDonation->created_at->format('Ymd'), $cashDonation->id))
+        ->and($cashDonation->transaction_id)->toBeNull()
         ->and($cashDonation->bill_code)->toBe('BILL-CASH-001')
         ->and(data_get($cashDonation->raw_response, 'payment_method'))->toBe('toyyibpay')
         ->and(data_get($cashDonation->raw_response, 'toyyibpay.response.0.BillCode'))->toBe('BILL-CASH-001');
@@ -57,7 +58,7 @@ test('creating a cash donation creates a pending ToyyibPay bill and redirects to
     Http::assertSent(fn ($request) => $request->url() === 'https://dev.toyyibpay.com/index.php/api/createBill'
         && $request['billAmount'] === 12550
         && $request['billPhone'] === '0100000000'
-        && $request['billExternalReferenceNo'] === $cashDonation->transaction_id
+        && $request['billExternalReferenceNo'] === $cashDonation->reference_no
         && $request['billReturnUrl'] === route('penderma.tabung.return')
         && $request['billCallbackUrl'] === route('penderma.tabung.callback'));
 });
@@ -97,7 +98,7 @@ test('successful ToyyibPay callback marks cash donation as successful', function
         'user_id' => User::factory()->create(['role' => 'penderma'])->id,
         'amount' => 50,
         'bill_code' => 'BILL-SUCCESS',
-        'transaction_id' => 'TAB/20260625/000001',
+        'reference_no' => 'TAB/20260625/000001',
         'payment_status' => CashDonation::STATUS_PENDING,
     ]);
 
@@ -115,9 +116,43 @@ test('successful ToyyibPay callback marks cash donation as successful', function
         ->and($cashDonation->paid_at->format('Y-m-d H:i:s'))->toBe('2026-07-16 09:30:00')
         ->and($cashDonation->resolved_at)->not->toBeNull()
         ->and($cashDonation->resolved_at->format('Y-m-d H:i:s'))->toBe('2026-07-16 09:30:00')
+        ->and($cashDonation->reference_no)->toBe('TAB/20260625/000001')
         ->and($cashDonation->transaction_id)->toBe('FPX-SUCCESS-001')
         ->and($cashDonation->bill_code)->toBe('BILL-SUCCESS')
         ->and(data_get($cashDonation->raw_response, 'status'))->toBe('1');
+});
+
+test('cash donation ToyyibPay callback still matches by bill code', function () {
+    Carbon::setTestNow('2026-07-16 09:45:00');
+
+    $cashDonation = CashDonation::create([
+        'user_id' => User::factory()->create(['role' => 'penderma'])->id,
+        'amount' => 75,
+        'bill_code' => 'BILL-BILLCODE-MATCH',
+        'reference_no' => 'TAB/20260625/000099',
+        'payment_status' => CashDonation::STATUS_PENDING,
+    ]);
+
+    $orderId = 'TAB/20990101/999999';
+    $reference = 'TP-BILLCODE-001';
+
+    $this
+        ->post(route('penderma.tabung.callback'), [
+            'status' => '1',
+            'billcode' => 'BILL-BILLCODE-MATCH',
+            'order_id' => $orderId,
+            'refno' => $reference,
+            'amount' => (string) $cashDonation->amount,
+            'hash' => md5(config('services.toyyibpay.secret_key') . '1' . $orderId . $reference . 'ok'),
+        ])
+        ->assertOk();
+
+    $cashDonation->refresh();
+
+    expect($cashDonation->payment_status)->toBe(CashDonation::STATUS_SUCCESS)
+        ->and($cashDonation->reference_no)->toBe('TAB/20260625/000099')
+        ->and($cashDonation->transaction_id)->toBe('TP-BILLCODE-001')
+        ->and($cashDonation->bill_code)->toBe('BILL-BILLCODE-MATCH');
 });
 
 test('failed ToyyibPay callback marks cash donation as failed', function () {
@@ -127,7 +162,7 @@ test('failed ToyyibPay callback marks cash donation as failed', function () {
         'user_id' => User::factory()->create(['role' => 'penderma'])->id,
         'amount' => 80,
         'bill_code' => 'BILL-FAILED',
-        'transaction_id' => 'TAB/20260625/000002',
+        'reference_no' => 'TAB/20260625/000002',
         'payment_status' => CashDonation::STATUS_PENDING,
     ]);
 
@@ -144,6 +179,7 @@ test('failed ToyyibPay callback marks cash donation as failed', function () {
         ->and($cashDonation->paid_at)->toBeNull()
         ->and($cashDonation->resolved_at)->not->toBeNull()
         ->and($cashDonation->resolved_at->format('Y-m-d H:i:s'))->toBe('2026-07-16 10:45:00')
+        ->and($cashDonation->reference_no)->toBe('TAB/20260625/000002')
         ->and($cashDonation->transaction_id)->toBe('FPX-FAILED-001')
         ->and(data_get($cashDonation->raw_response, 'status'))->toBe('3');
 });
@@ -155,7 +191,7 @@ test('duplicate ToyyibPay callbacks do not overwrite cash donation resolution ti
         'user_id' => User::factory()->create(['role' => 'penderma'])->id,
         'amount' => 65,
         'bill_code' => 'BILL-DUPLICATE',
-        'transaction_id' => 'TAB/20260716/000001',
+        'reference_no' => 'TAB/20260716/000001',
         'payment_status' => CashDonation::STATUS_PENDING,
     ]);
 
@@ -181,6 +217,7 @@ test('duplicate ToyyibPay callbacks do not overwrite cash donation resolution ti
     expect($cashDonation->payment_status)->toBe(CashDonation::STATUS_SUCCESS)
         ->and($cashDonation->paid_at->equalTo($firstPaidAt))->toBeTrue()
         ->and($cashDonation->resolved_at->equalTo($firstResolvedAt))->toBeTrue()
+        ->and($cashDonation->reference_no)->toBe('TAB/20260716/000001')
         ->and($cashDonation->resolved_at->format('Y-m-d H:i:s'))->toBe('2026-07-16 11:00:00');
 });
 
@@ -191,7 +228,7 @@ test('pending ToyyibPay callback keeps cash donation unresolved', function () {
         'user_id' => User::factory()->create(['role' => 'penderma'])->id,
         'amount' => 55,
         'bill_code' => 'BILL-PENDING',
-        'transaction_id' => 'TAB/20260716/000002',
+        'reference_no' => 'TAB/20260716/000002',
         'payment_status' => CashDonation::STATUS_PENDING,
     ]);
 
@@ -204,6 +241,7 @@ test('pending ToyyibPay callback keeps cash donation unresolved', function () {
     $cashDonation->refresh();
 
     expect($cashDonation->payment_status)->toBe(CashDonation::STATUS_PENDING)
+        ->and($cashDonation->reference_no)->toBe('TAB/20260716/000002')
         ->and($cashDonation->paid_at)->toBeNull()
         ->and($cashDonation->resolved_at)->toBeNull();
 });
@@ -217,7 +255,7 @@ test('cash donation receipt is only available after successful payment', functio
         'user_id' => $donor->id,
         'amount' => 90,
         'bill_code' => 'BILL-RECEIPT',
-        'transaction_id' => 'TAB/20260625/000003',
+        'reference_no' => 'TAB/20260625/000003',
         'payment_status' => CashDonation::STATUS_PENDING,
     ]);
 
@@ -238,6 +276,112 @@ test('cash donation receipt is only available after successful payment', functio
         ->assertOk()
         ->assertSee('ToyyibPay')
         ->assertDontSee('rekod simulasi lama');
+});
+
+test('admin sumbangan report displays cash donation reference number instead of ToyyibPay identifiers', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $donor = User::factory()->create([
+        'role' => 'penderma',
+        'name' => 'Tabung Report Donor',
+    ]);
+
+    createCashDonationRecord([
+        'user_id' => $donor->id,
+        'amount' => 150,
+        'reference_no' => 'TAB/20260719/000055',
+        'bill_code' => 'y2iu867e',
+        'transaction_id' => 'TP2607191751758997',
+        'payment_status' => CashDonation::STATUS_SUCCESS,
+        'paid_at' => '2026-07-19 17:55:00',
+        'resolved_at' => '2026-07-19 17:55:00',
+        'created_at' => '2026-07-19 17:51:00',
+        'updated_at' => '2026-07-19 17:55:00',
+    ]);
+
+    $this
+        ->actingAs($admin)
+        ->get(route('admin.statistik.sumbangan'))
+        ->assertOk()
+        ->assertSee('TAB/20260719/000055')
+        ->assertDontSee('y2iu867e')
+        ->assertDontSee('TP2607191751758997');
+});
+
+test('admin sumbangan CSV exports cash donation reference number instead of ToyyibPay identifiers', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $donor = User::factory()->create(['role' => 'penderma']);
+
+    createCashDonationRecord([
+        'user_id' => $donor->id,
+        'amount' => 175,
+        'reference_no' => 'TAB/20260719/000056',
+        'bill_code' => 'mm9hxx0o',
+        'transaction_id' => 'TP2607191751758998',
+        'payment_status' => CashDonation::STATUS_SUCCESS,
+        'paid_at' => '2026-07-19 18:05:00',
+        'resolved_at' => '2026-07-19 18:05:00',
+        'created_at' => '2026-07-19 18:01:00',
+        'updated_at' => '2026-07-19 18:05:00',
+    ]);
+
+    $response = $this
+        ->actingAs($admin)
+        ->get(route('admin.statistik.sumbangan.csv'))
+        ->assertOk();
+
+    $csv = $response->streamedContent();
+
+    expect($csv)->toContain('TAB/20260719/000056')
+        ->not->toContain('mm9hxx0o')
+        ->not->toContain('TP2607191751758998');
+});
+
+test('cash donation reference number backfill preserves existing payment data', function () {
+    $donor = User::factory()->create(['role' => 'penderma']);
+
+    $cashDonation = createCashDonationRecord([
+        'user_id' => $donor->id,
+        'amount' => 210,
+        'reference_no' => null,
+        'bill_code' => 'BILL-BACKFILL',
+        'transaction_id' => 'TP-BACKFILL-001',
+        'payment_status' => CashDonation::STATUS_SUCCESS,
+        'paid_at' => '2026-07-19 12:00:00',
+        'resolved_at' => '2026-07-19 12:05:00',
+        'created_at' => '2026-07-19 11:50:00',
+        'updated_at' => '2026-07-19 12:05:00',
+    ]);
+
+    $existingReference = createCashDonationRecord([
+        'user_id' => $donor->id,
+        'amount' => 220,
+        'reference_no' => 'TAB/KEEP/000001',
+        'bill_code' => 'BILL-KEEP',
+        'transaction_id' => 'TP-KEEP-001',
+        'payment_status' => CashDonation::STATUS_SUCCESS,
+        'paid_at' => '2026-07-19 13:00:00',
+        'resolved_at' => '2026-07-19 13:05:00',
+        'created_at' => '2026-07-19 12:50:00',
+        'updated_at' => '2026-07-19 13:05:00',
+    ]);
+
+    $migration = include database_path('migrations/2026_07_19_000001_add_reference_no_to_cash_donations_table.php');
+    $migration->up();
+
+    $cashDonation->refresh();
+    $existingReference->refresh();
+
+    expect($cashDonation->reference_no)->toBe(sprintf('TAB/20260719/%06d', $cashDonation->id))
+        ->and($cashDonation->bill_code)->toBe('BILL-BACKFILL')
+        ->and($cashDonation->transaction_id)->toBe('TP-BACKFILL-001')
+        ->and($cashDonation->payment_status)->toBe(CashDonation::STATUS_SUCCESS)
+        ->and((float) $cashDonation->amount)->toBe(210.0)
+        ->and($cashDonation->user_id)->toBe($donor->id)
+        ->and($cashDonation->paid_at->format('Y-m-d H:i:s'))->toBe('2026-07-19 12:00:00')
+        ->and($cashDonation->resolved_at->format('Y-m-d H:i:s'))->toBe('2026-07-19 12:05:00')
+        ->and($cashDonation->updated_at->format('Y-m-d H:i:s'))->toBe('2026-07-19 12:05:00')
+        ->and($existingReference->reference_no)->toBe('TAB/KEEP/000001')
+        ->and(CashDonation::query()->where('reference_no', $cashDonation->reference_no)->count())->toBe(1);
 });
 
 test('pending and failed cash donations do not increase dana terkumpul', function () {
@@ -432,7 +576,7 @@ test('admin tabung Tarikh displays the same effective timestamp used for sorting
 
 function toyyibpayCashDonationPayload(CashDonation $cashDonation, string $status, string $reference): array
 {
-    $orderId = $cashDonation->transaction_id;
+    $orderId = $cashDonation->reference_no;
 
     return [
         'status' => $status,

@@ -148,7 +148,7 @@
                             <th class="px-5 py-4 font-semibold">Jumlah</th>
                             <th class="px-5 py-4 font-semibold">Status</th>
                             <th class="px-5 py-4 font-semibold">Tarikh</th>
-                            <th class="px-5 py-4 font-semibold">Transaksi / Bill Code</th>
+                            <th class="px-5 py-4 font-semibold">Rujukan / Transaksi / Bill Code</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
@@ -174,7 +174,8 @@
                                     {{ optional($donation->resolved_at ?? $donation->paid_at ?? $donation->created_at)->format('d/m/Y h:i A') }}
                                 </td>
                                 <td class="px-5 py-4 text-slate-700">
-                                    <p class="break-all font-semibold">{{ $donation->transaction_id ?: '-' }}</p>
+                                    <p class="break-all font-semibold">{{ $donation->reference_no ?: '-' }}</p>
+                                    <p class="mt-1 break-all text-xs text-slate-500">{{ $donation->transaction_id ?: '-' }}</p>
                                     <p class="mt-1 break-all text-xs text-slate-500">{{ $donation->bill_code ?: '-' }}</p>
                                 </td>
                             </tr>
