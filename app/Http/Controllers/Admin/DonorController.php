@@ -21,19 +21,89 @@ class DonorController extends Controller
 
     public function index(Request $request)
     {
-        $search = $request->query('search');
+        $search = trim((string) $request->query('search', ''));
 
-        $donors = Donor::with(['user', 'address'])
-            ->when($search, function ($query) use ($search) {
-                $query->whereHas('user', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+        $homepageFilter = $request->query('homepage', 'all');
+        if (! in_array($homepageFilter, ['all', 'displayed', 'hidden'], true)) {
+            $homepageFilter = 'all';
+        }
+
+        $jenisFilter = $request->query('jenis', 'all');
+        if (! in_array($jenisFilter, ['all', 'individu', 'organisasi'], true)) {
+            $jenisFilter = 'all';
+        }
+
+        $sortBy = $request->query('sort', 'latest');
+        if (! in_array($sortBy, ['latest', 'oldest', 'name_az', 'ranking'], true)) {
+            $sortBy = 'latest';
+        }
+
+        $donorsQuery = Donor::query()
+            ->select('donors.*')
+            ->with(['user', 'address'])
+            ->join('users', 'users.id', '=', 'donors.user_id')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('users.name', 'like', "%{$search}%")
+                      ->orWhere('users.email', 'like', "%{$search}%");
                 });
             })
-            ->latest()
-            ->get();
+            ->when($homepageFilter === 'displayed', function ($query) {
+                $query->where('donors.show_on_homepage', true);
+            })
+            ->when($homepageFilter === 'hidden', function ($query) {
+                $query->where('donors.show_on_homepage', false);
+            })
+            ->when($jenisFilter === 'individu', function ($query) {
+                $query->where('donors.donor_type', 'individu');
+            })
+            ->when($jenisFilter === 'organisasi', function ($query) {
+                $query->whereIn('donors.donor_type', ['syarikat', 'ngo']);
+            });
 
-        return view('admin.penderma.index', compact('donors', 'search'));
+        match ($sortBy) {
+            'oldest' => $donorsQuery
+                ->orderBy('users.created_at', 'asc')
+                ->orderBy('donors.id', 'asc'),
+            'name_az' => $donorsQuery
+                ->orderBy('users.name', 'asc')
+                ->orderBy('donors.id', 'asc'),
+            'ranking' => $donorsQuery
+                ->orderByRaw(
+                    'CASE WHEN donors.show_on_homepage = ? AND donors.homepage_order IS NOT NULL AND donors.homepage_order > 0 THEN 0 ELSE 1 END ASC',
+                    [true]
+                )
+                ->orderByRaw(
+                    'CASE WHEN donors.show_on_homepage = ? AND donors.homepage_order IS NOT NULL AND donors.homepage_order > 0 THEN donors.homepage_order END ASC',
+                    [true]
+                )
+                ->orderBy('donors.id', 'asc'),
+            default => $donorsQuery
+                ->orderBy('users.created_at', 'desc')
+                ->orderBy('donors.id', 'desc'),
+        };
+
+        $donors = $donorsQuery
+            ->paginate(15)
+            ->withQueryString();
+
+        $oldEditingDonor = null;
+        $oldEditingUserId = $request->old('_editing_user_id');
+
+        if ($oldEditingUserId) {
+            $oldEditingDonor = Donor::with(['user', 'address'])
+                ->where('user_id', $oldEditingUserId)
+                ->first();
+        }
+
+        return view('admin.penderma.index', compact(
+            'donors',
+            'search',
+            'homepageFilter',
+            'jenisFilter',
+            'sortBy',
+            'oldEditingDonor'
+        ));
     }
 
     public function create()

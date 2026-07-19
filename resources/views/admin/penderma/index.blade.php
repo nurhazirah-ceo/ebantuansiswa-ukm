@@ -9,11 +9,13 @@
     $states = \App\Http\Controllers\Admin\DonorController::stateOptions();
     $countryOptions = ['Malaysia', 'Singapore', 'Indonesia', 'Thailand', 'Brunei', 'Lain-lain'];
     $storageUrl = fn ($path) => $path ? asset('storage/' . ltrim((string) $path, '/')) : '';
+    $homepageFilter = $homepageFilter ?? 'all';
+    $jenisFilter = $jenisFilter ?? 'all';
+    $sortBy = $sortBy ?? 'latest';
+    $hasActiveFilters = ($search ?? '') !== '' || $homepageFilter !== 'all' || $jenisFilter !== 'all';
 
     $oldEditingUserId = old('_editing_user_id');
-    $oldEditingDonor = $oldEditingUserId
-        ? $donors->first(fn ($item) => (string) optional(optional($item)->user)->id === (string) $oldEditingUserId)
-        : null;
+    $oldEditingDonor = $oldEditingDonor ?? null;
     $oldEditingUser = optional($oldEditingDonor)->user;
     $oldEditingAddress = optional($oldEditingDonor)->address;
     $oldCountry = old('country', optional($oldEditingAddress)->country ?: 'Malaysia');
@@ -78,8 +80,8 @@
 
     {{-- CARD HEADER --}}
     <div class="bg-[#071633] px-4 py-4 text-white">
-<div class="flex justify-end">            
-            <form method="GET" action="{{ route('admin.penderma.index') }}" class="w-full lg:max-w-md">
+        <form method="GET" action="{{ route('admin.penderma.index') }}" class="w-full">
+            <div class="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.7fr)_minmax(10rem,0.7fr)_minmax(12rem,0.9fr)_auto]">
                 <div class="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 shadow-inner">
                     <svg class="h-5 w-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -89,16 +91,41 @@
                     <input type="text"
                            name="search"
                            value="{{ $search ?? '' }}"
-                           placeholder="Cari nama atau emel penderma..."
+                           placeholder="Cari nama atau emel"
                            class="w-full border-0 bg-transparent text-sm text-white placeholder:text-slate-300 focus:outline-none focus:ring-0">
-
-                    <button type="submit"
-                            class="rounded-xl bg-white px-5 py-2 text-sm font-semibold text-[#071633] transition hover:bg-slate-100">
-                        Cari
-                    </button>
                 </div>
-            </form>
-        </div>
+
+                <select name="homepage"
+                        aria-label="Tapis homepage"
+                        class="h-full min-h-[3rem] rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
+                    <option value="all" @selected($homepageFilter === 'all')>Homepage: Semua</option>
+                    <option value="displayed" @selected($homepageFilter === 'displayed')>Homepage: Dipaparkan</option>
+                    <option value="hidden" @selected($homepageFilter === 'hidden')>Homepage: Tidak Dipaparkan</option>
+                </select>
+
+                <select name="jenis"
+                        aria-label="Tapis jenis penderma"
+                        class="h-full min-h-[3rem] rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
+                    <option value="all" @selected($jenisFilter === 'all')>Jenis: Semua</option>
+                    <option value="individu" @selected($jenisFilter === 'individu')>Jenis: Individu</option>
+                    <option value="organisasi" @selected($jenisFilter === 'organisasi')>Jenis: Organisasi</option>
+                </select>
+
+                <select name="sort"
+                        aria-label="Susun senarai penderma"
+                        class="h-full min-h-[3rem] rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
+                    <option value="latest" @selected($sortBy === 'latest')>Tarikh Daftar (Terbaru)</option>
+                    <option value="oldest" @selected($sortBy === 'oldest')>Tarikh Daftar (Terlama)</option>
+                    <option value="ranking" @selected($sortBy === 'ranking')>Ranking Homepage</option>
+                    <option value="name_az" @selected($sortBy === 'name_az')>Nama A-Z</option>
+                </select>
+
+                <button type="submit"
+                        class="min-h-[3rem] rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#071633] transition hover:bg-slate-100">
+                    Cari
+                </button>
+            </div>
+        </form>
     </div>
 
     {{-- TABLE --}}
@@ -106,11 +133,11 @@
         <table class="min-w-full divide-y divide-slate-100">
             <thead class="bg-slate-50">
                 <tr>
-                    <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Logo</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Nama</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">No.</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Nama Penderma</th>
                     <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Homepage</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Jenis</th>
                     <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Ranking</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Emel</th>
                     <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Tarikh Daftar</th>
                     <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
                     <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Tindakan</th>
@@ -129,6 +156,11 @@
                         $rawCountry = optional($address)->country ?: 'Malaysia';
                         $selectedCountry = in_array($rawCountry, $countryOptions, true) ? $rawCountry : 'Lain-lain';
                         $countryOther = $selectedCountry === 'Lain-lain' ? $rawCountry : '';
+                        $jenisLabel = match (optional($donor)->donor_type) {
+                            'individu' => 'Individu',
+                            'syarikat', 'ngo' => 'Organisasi',
+                            default => '-',
+                        };
 
                         $editPayload = [
                             'id' => $userId,
@@ -155,15 +187,8 @@
                     @endphp
 
                     <tr class="transition hover:bg-slate-50/80">
-                        <td class="px-6 py-5">
-                            @if ($logoUrl)
-                                <img src="{{ $logoUrl }}"
-                                     class="h-16 w-16 rounded-2xl border border-slate-200 bg-white object-contain p-2 shadow-sm">
-                            @else
-                                <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-400">
-                                    Tiada
-                                </div>
-                            @endif
+                        <td class="px-6 py-5 text-sm font-semibold text-slate-500">
+                            {{ $donors->firstItem() + $loop->index }}
                         </td>
 
                         <td class="px-6 py-5">
@@ -185,11 +210,15 @@
                         </td>
 
                         <td class="px-6 py-5 text-sm font-semibold text-slate-700">
-                            {{ optional($donor)->homepage_order ? '#' . optional($donor)->homepage_order : '-' }}
+                            {{ $jenisLabel }}
                         </td>
 
-                        <td class="px-6 py-5 text-sm text-slate-600">
-                            {{ optional($user)->email ?? '-' }}
+                        <td class="px-6 py-5 text-sm font-semibold text-slate-700">
+                            @if (optional($donor)->show_on_homepage && optional($donor)->homepage_order)
+                                #{{ optional($donor)->homepage_order }}
+                            @else
+                                &mdash;
+                            @endif
                         </td>
 
                         <td class="px-6 py-5 text-sm text-slate-600">
@@ -284,7 +313,7 @@
                             <div class="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8">
                                 <p class="text-sm font-semibold text-slate-700">Tiada penderma dijumpai.</p>
                                 <p class="mt-2 text-sm text-slate-500">
-                                    {{ filled($search ?? null) ? 'Cuba gunakan kata kunci carian yang lain.' : 'Penderma yang didaftarkan akan dipaparkan di sini.' }}
+                                    {{ $hasActiveFilters ? 'Cuba gunakan carian atau tapisan yang lain.' : 'Penderma yang didaftarkan akan dipaparkan di sini.' }}
                                 </p>
                             </div>
                         </td>
@@ -293,6 +322,12 @@
             </tbody>
         </table>
     </div>
+
+    @if ($donors->hasPages())
+        <div class="border-t border-slate-100 px-6 py-4">
+            {{ $donors->links() }}
+        </div>
+    @endif
 </section>
 
 {{-- EDIT MODAL --}}

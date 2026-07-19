@@ -17,6 +17,35 @@ function useWritablePublicDisk(): void
     Storage::forgetDisk('public');
 }
 
+function createListedDonor(
+    string $name,
+    string $email,
+    array $donorAttributes = [],
+    ?string $registeredAt = null
+): Donor {
+    $user = User::factory()->create([
+        'role' => 'penderma',
+        'name' => $name,
+        'email' => $email,
+    ]);
+
+    if ($registeredAt) {
+        $user->forceFill([
+            'created_at' => $registeredAt,
+            'updated_at' => $registeredAt,
+        ])->save();
+    }
+
+    return Donor::create(array_merge([
+        'user_id' => $user->id,
+        'donor_type' => 'individu',
+        'phone' => '0123456789',
+        'preferred_contact' => 'email',
+        'homepage_order' => null,
+        'show_on_homepage' => false,
+    ], $donorAttributes));
+}
+
 test('admin can create individual donor with Malaysian mobile phone number', function () {
     $admin = User::factory()->create([
         'role' => 'admin',
@@ -327,6 +356,213 @@ test('admin donor address forms render country selector and postcode controls', 
         ->assertOk()
         ->assertSee('id="editCountry"', false)
         ->assertSee('data-postcode-input', false);
+});
+
+test('admin donor list renders updated columns with pagination and keeps edit payload fields', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+
+    for ($i = 1; $i <= 15; $i++) {
+        createListedDonor(
+            "Penderma Filler {$i}",
+            "filler{$i}@example.com",
+            [],
+            now()->subDays($i)->toDateTimeString()
+        );
+    }
+
+    createListedDonor('Penderma Payload', 'payload@example.com', [
+        'logo' => 'donor-logos/payload.png',
+    ], now()->toDateTimeString());
+
+    $response = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('placeholder="Cari nama atau emel"', false)
+        ->assertSee('No.')
+        ->assertSee('Nama Penderma')
+        ->assertSee('Jenis')
+        ->assertDontSee('>Logo</th>', false)
+        ->assertDontSee('>Emel</th>', false)
+        ->assertSee('"emel":"payload@example.com"', false)
+        ->assertSee('"logoUrl"', false);
+
+    $donors = $response->viewData('donors');
+
+    expect($donors)->toBeInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class)
+        ->and($donors->perPage())->toBe(15)
+        ->and($donors->count())->toBe(15)
+        ->and($donors->total())->toBe(16);
+
+    $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', [
+            'search' => 'Penderma',
+            'sort' => 'name_az',
+        ]))
+        ->assertOk()
+        ->assertSee('search=Penderma', false)
+        ->assertSee('sort=name_az', false);
+});
+
+test('admin donor list filters by search homepage and donor type', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+
+    createListedDonor('Penderma Individu Dipapar', 'individu-visible@example.com', [
+        'donor_type' => 'individu',
+        'homepage_order' => 1,
+        'show_on_homepage' => true,
+    ]);
+    createListedDonor('Syarikat Tersembunyi', 'hidden-company@example.com', [
+        'donor_type' => 'syarikat',
+        'show_on_homepage' => false,
+    ]);
+    createListedDonor('NGO Dipapar', 'ngo-visible@example.com', [
+        'donor_type' => 'ngo',
+        'homepage_order' => 2,
+        'show_on_homepage' => true,
+    ]);
+
+    $searchedNames = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['search' => 'hidden-company']))
+        ->assertOk()
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($searchedNames)->toBe(['Syarikat Tersembunyi']);
+
+    $displayedNames = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['homepage' => 'displayed']))
+        ->assertOk()
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($displayedNames)
+        ->toContain('Penderma Individu Dipapar')
+        ->toContain('NGO Dipapar')
+        ->not->toContain('Syarikat Tersembunyi');
+
+    $organisationNames = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['jenis' => 'organisasi']))
+        ->assertOk()
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($organisationNames)
+        ->toContain('Syarikat Tersembunyi')
+        ->toContain('NGO Dipapar')
+        ->not->toContain('Penderma Individu Dipapar');
+});
+
+test('admin donor list sorts by registration name and homepage ranking', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+
+    createListedDonor('Beta Lama', 'beta@example.com', [
+        'homepage_order' => 2,
+        'show_on_homepage' => true,
+    ], now()->subDays(5)->toDateTimeString());
+    createListedDonor('Alpha Baharu', 'alpha@example.com', [
+        'homepage_order' => 1,
+        'show_on_homepage' => true,
+    ], now()->subDay()->toDateTimeString());
+    createListedDonor('Hidden Ranked', 'hidden-ranked@example.com', [
+        'donor_type' => 'syarikat',
+        'homepage_order' => 9,
+        'show_on_homepage' => false,
+    ], now()->subDays(2)->toDateTimeString());
+
+    $latestNames = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['sort' => 'latest']))
+        ->assertOk()
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($latestNames[0])->toBe('Alpha Baharu');
+
+    $oldestNames = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['sort' => 'oldest']))
+        ->assertOk()
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($oldestNames[0])->toBe('Beta Lama');
+
+    $nameSortedNames = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['sort' => 'name_az']))
+        ->assertOk()
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($nameSortedNames[0])->toBe('Alpha Baharu');
+
+    $rankingResponse = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', ['sort' => 'ranking']))
+        ->assertOk()
+        ->assertSee('&mdash;', false);
+
+    $rankingNames = $rankingResponse
+        ->viewData('donors')
+        ->getCollection()
+        ->map(fn (Donor $donor) => $donor->user->name)
+        ->all();
+
+    expect($rankingNames[0])->toBe('Alpha Baharu')
+        ->and($rankingNames[1])->toBe('Beta Lama')
+        ->and(array_search('Hidden Ranked', $rankingNames, true))->toBeGreaterThan(1);
+});
+
+test('admin donor list ignores invalid filter and sort values', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'email' => 'admin@example.com',
+    ]);
+
+    createListedDonor('Penderma Selamat', 'safe@example.com');
+
+    $response = $this
+        ->actingAs($admin)
+        ->get(route('admin.penderma.index', [
+            'homepage' => 'invalid',
+            'jenis' => 'invalid',
+            'sort' => 'invalid',
+        ]));
+
+    $response->assertOk();
+
+    expect($response->viewData('homepageFilter'))->toBe('all')
+        ->and($response->viewData('jenisFilter'))->toBe('all')
+        ->and($response->viewData('sortBy'))->toBe('latest')
+        ->and($response->viewData('donors')->total())->toBe(1);
 });
 
 test('admin cannot create donor with invalid postcode', function (string $postcode) {
