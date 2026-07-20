@@ -51,11 +51,23 @@
 <div class="py-6">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <x-page-hero
-    class="mb-6"
-    eyebrow="Penderma"
-    title="Senarai Penderma"
-    description="Pantau maklumat penderma berdaftar dan status akaun penderma dalam sistem."
-/>
+            class="relative mb-6"
+            eyebrow="Penderma"
+            title="Senarai Penderma"
+            description="Pantau maklumat penderma berdaftar dan status akaun penderma dalam sistem."
+        >
+            <div class="mt-5 flex justify-start sm:absolute sm:right-6 sm:top-6 sm:mt-0">
+                <a href="#"
+                   class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <path d="M7 10l5 5 5-5" />
+                        <path d="M12 15V3" />
+                    </svg>
+                    <span>Export Excel</span>
+                </a>
+            </div>
+        </x-page-hero>
 
         @if (session('success'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
@@ -79,25 +91,25 @@
 <section class="overflow-hidden rounded-[1.5rem] bg-white shadow-lg ring-1 ring-slate-200/70">
 
     {{-- CARD HEADER --}}
-    <div class="bg-[#071633] px-4 py-4 text-white">
-        <form method="GET" action="{{ route('admin.penderma.index') }}" class="w-full">
-            <div class="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(10rem,0.7fr)_minmax(10rem,0.7fr)_minmax(12rem,0.9fr)_auto]">
-                <div class="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 shadow-inner">
-                    <svg class="h-5 w-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
-                    </svg>
+    <div class="bg-[#071633] px-4 py-3 text-white">
+        <form method="GET" action="{{ route('admin.penderma.index') }}" class="w-full space-y-3">
+            <div class="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 shadow-inner">
+                <svg class="h-5 w-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                </svg>
 
-                    <input type="text"
-                           name="search"
-                           value="{{ $search ?? '' }}"
-                           placeholder="Cari nama atau emel"
-                           class="w-full border-0 bg-transparent text-sm text-white placeholder:text-slate-300 focus:outline-none focus:ring-0">
-                </div>
+                <input type="text"
+                       name="search"
+                       value="{{ $search ?? '' }}"
+                       placeholder="Cari nama atau emel"
+                       class="w-full border-0 bg-transparent text-sm text-white placeholder:text-slate-300 focus:outline-none focus:ring-0">
+            </div>
 
+            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
                 <select name="homepage"
                         aria-label="Tapis homepage"
-                        class="h-full min-h-[3rem] rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
+                        class="min-h-[2.75rem] rounded-2xl border border-white/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
                     <option value="all" @selected($homepageFilter === 'all')>Homepage: Semua</option>
                     <option value="displayed" @selected($homepageFilter === 'displayed')>Homepage: Dipaparkan</option>
                     <option value="hidden" @selected($homepageFilter === 'hidden')>Homepage: Tidak Dipaparkan</option>
@@ -105,7 +117,7 @@
 
                 <select name="jenis"
                         aria-label="Tapis jenis penderma"
-                        class="h-full min-h-[3rem] rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
+                        class="min-h-[2.75rem] rounded-2xl border border-white/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
                     <option value="all" @selected($jenisFilter === 'all')>Jenis: Semua</option>
                     <option value="individu" @selected($jenisFilter === 'individu')>Jenis: Individu</option>
                     <option value="organisasi" @selected($jenisFilter === 'organisasi')>Jenis: Organisasi</option>
@@ -113,7 +125,7 @@
 
                 <select name="sort"
                         aria-label="Susun senarai penderma"
-                        class="h-full min-h-[3rem] rounded-2xl border border-white/15 bg-white px-4 py-3 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
+                        class="min-h-[2.75rem] rounded-2xl border border-white/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#071633] shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40">
                     <option value="latest" @selected($sortBy === 'latest')>Tarikh Daftar (Terbaru)</option>
                     <option value="oldest" @selected($sortBy === 'oldest')>Tarikh Daftar (Terlama)</option>
                     <option value="ranking" @selected($sortBy === 'ranking')>Ranking Homepage</option>
@@ -121,7 +133,7 @@
                 </select>
 
                 <button type="submit"
-                        class="min-h-[3rem] rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#071633] transition hover:bg-slate-100">
+                        class="min-h-[2.75rem] rounded-2xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 lg:min-w-[7rem]">
                     Cari
                 </button>
             </div>
